@@ -3,64 +3,70 @@
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 
-import unittest
 from unittest.mock import Mock
 
+import pytest
+
 from charm import KubernetesAutoscalerCharm
-from ops.model import ActiveStatus
+from ops.model import ActiveStatus, BlockedStatus, ModelError
 from ops.testing import Harness
 
 
-class TestCharm(unittest.TestCase):
-    def setUp(self):
-        self.harness = Harness(KubernetesAutoscalerCharm)
-        self.addCleanup(self.harness.cleanup)
-        self.harness.begin()
+@pytest.fixture(scope="function")
+def harness():
+    harness = Harness(KubernetesAutoscalerCharm)
+    harness.begin()
+    yield harness
+    harness.cleanup()
 
-    def test_config_changed(self):
-        self.assertEqual(list(self.harness.charm._stored.things), [])
-        self.harness.update_config({"thing": "foo"})
-        self.assertEqual(list(self.harness.charm._stored.things), ["foo"])
 
-    def test_action(self):
-        # the harness doesn't (yet!) help much with actions themselves
-        action_event = Mock(params={"fail": ""})
-        self.harness.charm._on_fortune_action(action_event)
+def test_config_changed(harness):
+    last_config_idx = len(harness.charm._juju_config) - 1
+    for idx, opt in enumerate(harness.charm._juju_config):
+        default = 5 if opt == "juju_refresh_interval" else None
+        assert getattr(harness.charm._stored, opt) is default
+        harness.update_config({opt: f"foo-{idx}"})
+        assert getattr(harness.charm._stored, opt) == f"foo-{idx}"
+        if idx != last_config_idx:
+            assert harness.model.unit.status == BlockedStatus("Waiting for Juju Configuration")
+    assert harness.model.unit.status == ActiveStatus("Ready to Scale")
 
-        self.assertTrue(action_event.set_results.called)
 
-    def test_action_fail(self):
-        action_event = Mock(params={"fail": "fail this"})
-        self.harness.charm._on_fortune_action(action_event)
+def test_action(harness):
+    # the harness doesn't (yet!) help much with actions themselves
+    action_event = Mock(params={"fail": ""})
+    harness.charm._on_refresh_controller_action(action_event)
+    assert action_event.set_results.called
 
-        self.assertEqual(action_event.fail.call_args, [("fail this",)])
 
-    def test_httpbin_pebble_ready(self):
-        # Check the initial Pebble plan is empty
-        initial_plan = self.harness.get_container_pebble_plan("httpbin")
-        self.assertEqual(initial_plan.to_yaml(), "{}\n")
-        # Expected plan after Pebble ready with default config
-        expected_plan = {
-            "services": {
-                "httpbin": {
-                    "override": "replace",
-                    "summary": "httpbin",
-                    "command": "gunicorn -b 0.0.0.0:80 httpbin:app -k gevent",
-                    "startup": "enabled",
-                    "environment": {"thing": "🎁"},
-                }
-            },
-        }
-        # Get the httpbin container from the model
-        container = self.harness.model.unit.get_container("httpbin")
-        # Emit the PebbleReadyEvent carrying the httpbin container
-        self.harness.charm.on.httpbin_pebble_ready.emit(container)
-        # Get the plan now we've run PebbleReady
-        updated_plan = self.harness.get_container_pebble_plan("httpbin").to_dict()
-        # Check we've got the plan we expected
-        self.assertEqual(expected_plan, updated_plan)
-        # Check the service was started
-        service = self.harness.model.unit.get_container("httpbin").get_service("httpbin")
-        self.assertTrue(service.is_running())
-        # Ensure we set an ActiveStatus with no message
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus("Ready to Scale"))
+def test_action_fail(harness):
+    action_event = Mock(params={"fail": "fail this"})
+    harness.charm._on_refresh_controller_action(action_event)
+    assert action_event.fail.call_args == [("fail this",)]
+
+
+def test_juju_autoscaler_pebble_ready_initial_plan(harness):
+    # Check the initial Pebble plan is empty
+    initial_plan = harness.get_container_pebble_plan("juju-autoscaler")
+    assert initial_plan.to_yaml() == "{}\n"
+
+
+def test_juju_autoscaler_pebble_ready_before_config(harness):
+    # Check the initial Pebble plan is empty
+    initial_plan = harness.get_container_pebble_plan("juju-autoscaler")
+    assert initial_plan.to_yaml() == "{}\n"
+    # Expected plan after Pebble ready with default config
+    expected_plan = {}
+    # Get the juju-autoscaler container from the model
+    container = harness.model.unit.get_container("juju-autoscaler")
+    # Emit the PebbleReadyEvent carrying the juju-autoscaler container
+    harness.charm.on.juju_autoscaler_pebble_ready.emit(container)
+    # Get the plan now we've run PebbleReady
+    updated_plan = harness.get_container_pebble_plan("juju-autoscaler").to_dict()
+    # Check we've got the plan we expected
+    assert expected_plan == updated_plan
+    # Check the service was started
+    with pytest.raises(ModelError):
+        harness.model.unit.get_container("juju-autoscaler").get_service("juju-autoscaler")
+    # Ensure we set an BlockedStatus with a reason
+    assert harness.model.unit.status == BlockedStatus("Waiting for Juju Configuration")

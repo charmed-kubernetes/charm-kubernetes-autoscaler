@@ -15,7 +15,7 @@ async def file_contents(unit, path):
 async def test_build_and_deploy(ops_test):
     my_charm = await ops_test.build_charm(".")
     await ops_test.model.deploy(
-        my_charm, resources={"httpbin-image": "kennethreitz/httpbin:latest"}
+        my_charm, resources={"juju-autoscaler-image": "kennethreitz/httpbin:latest"}
     )
     await ops_test.model.wait_for_idle(wait_for_active=True)
 

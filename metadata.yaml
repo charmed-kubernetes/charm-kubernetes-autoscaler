@@ -12,10 +12,10 @@ summary: |
   TEMPLATE-TODO: fill out the charm's summary
 
 containers:
-  httpbin:
-    resource: httpbin-image
+  juju-autoscaler:
+    resource: juju-autoscaler-image
 
 resources:
-  httpbin-image:
+  juju-autoscaler-image:
     type: oci-image
     description: OCI image for httpbin (kennethreitz/httpbin)

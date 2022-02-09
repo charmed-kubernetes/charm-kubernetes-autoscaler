@@ -8,7 +8,39 @@
 # Learn more about config at: https://juju.is/docs/sdk/config
 
 options:
-  thing:
-    default: 🎁
-    description: A thing used by the charm.
+  juju_api_endpoint:
     type: string
+    default: null
+    description: |
+      Juju controller API endpoint
+  juju_ca_cert:
+    type: string
+    default: null
+    description: |
+      Juju controller CA certificate (base64 encoded)
+  juju_username:
+    type: string
+    default: null
+    description: |
+      Juju account username
+  juju_password:
+    type: string
+    default: null
+    description: |
+      Juju account password
+  juju_refresh_interval:
+    type: int
+    default: 5
+    description: |
+      How often to sync against the Juju model.
+  juju_model_uuid:
+    type: string
+    default: null
+    description: |
+      Juju model UUID
+  juju_application:
+    type: string
+    default: null
+    description: |
+      Name of the application to scale.
+
