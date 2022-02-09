@@ -66,7 +66,7 @@ class KubernetesAutoscalerCharm(CharmBase):
         container.autostart()
         # Learn more about statuses in the SDK docs:
         # https://juju.is/docs/sdk/constructs#heading--statuses
-        self.unit.status = ActiveStatus()
+        self.unit.status = ActiveStatus("Ready to Scale")
 
     def _on_config_changed(self, _):
         """Just an example to show how to deal with changed configuration.

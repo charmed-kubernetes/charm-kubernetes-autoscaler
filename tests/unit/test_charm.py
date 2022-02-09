@@ -63,4 +63,4 @@ class TestCharm(unittest.TestCase):
         service = self.harness.model.unit.get_container("httpbin").get_service("httpbin")
         self.assertTrue(service.is_running())
         # Ensure we set an ActiveStatus with no message
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus())
+        self.assertEqual(self.harness.model.unit.status, ActiveStatus("Ready to Scale"))

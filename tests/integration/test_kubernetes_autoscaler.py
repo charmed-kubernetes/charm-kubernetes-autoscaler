@@ -14,10 +14,12 @@ async def file_contents(unit, path):
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test):
     my_charm = await ops_test.build_charm(".")
-    await ops_test.model.deploy(my_charm)
-    await ops_test.model.wait_for_idle()
+    await ops_test.model.deploy(
+        my_charm, resources={"httpbin-image": "kennethreitz/httpbin:latest"}
+    )
+    await ops_test.model.wait_for_idle(wait_for_active=True)
 
 
 async def test_status(units):
-    assert units[0].workload_status == "blocked"
-    assert units[0].workload_status_message == "Missing token or org/repo path config"
+    assert units[0].workload_status == "active"
+    assert units[0].workload_status_message == "Ready to Scale"
