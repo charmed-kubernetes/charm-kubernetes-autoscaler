@@ -8,24 +8,24 @@
 # Learn more about config at: https://juju.is/docs/sdk/config
 
 options:
-  juju_api_endpoint:
+  juju_api_endpoints:
     type: string
-    default: null
+    default: ""
     description: |
-      Juju controller API endpoint
+      Juju controller API endpoints separated by commas
   juju_ca_cert:
     type: string
-    default: null
+    default: ""
     description: |
       Juju controller CA certificate (base64 encoded)
   juju_username:
     type: string
-    default: null
+    default: ""
     description: |
       Juju account username
   juju_password:
     type: string
-    default: null
+    default: ""
     description: |
       Juju account password
   juju_refresh_interval:
@@ -35,12 +35,15 @@ options:
       How often to sync against the Juju model.
   juju_model_uuid:
     type: string
-    default: null
+    default: ""
     description: |
       Juju model UUID
-  juju_application:
+  juju_scale:
     type: string
-    default: null
+    default: ""
     description: |
-      Name of the application to scale.
+      Comma separated list of applications to scale prefixed with the minimum and maximum within that node-group.
+      
+      example)
+      3:10:kubernetes-worker-amd64, 0:3:kubernetes-worker-arm64, 0:3:kubernetes-worker-s390x, 0:3:kubernetes-worker-gpu
 

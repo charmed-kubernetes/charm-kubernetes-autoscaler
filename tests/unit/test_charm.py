@@ -20,16 +20,45 @@ def harness():
     harness.cleanup()
 
 
-def test_config_changed(harness):
-    last_config_idx = len(harness.charm._juju_config) - 1
-    for idx, opt in enumerate(harness.charm._juju_config):
-        default = 5 if opt == "juju_refresh_interval" else None
-        assert getattr(harness.charm._stored, opt) is default
-        harness.update_config({opt: f"foo-{idx}"})
-        assert getattr(harness.charm._stored, opt) == f"foo-{idx}"
-        if idx != last_config_idx:
-            assert harness.model.unit.status == BlockedStatus("Waiting for Juju Configuration")
-    assert harness.model.unit.status == ActiveStatus("Ready to Scale")
+@pytest.mark.parametrize(
+    "opt, valid, invalid",
+    [
+        (
+            "api_endpoints",
+            "1.2.3.4:17070, 1.2.3.4:17070, 1.2.3.4:17070",
+            "1.2.3.4:70000,",
+        ),
+        ("ca_cert", "dGVzdA==", "*testing*"),  # "test" base64 encoded
+        (
+            "username",
+            "alice",
+            "",
+        ),
+        ("password", "secret", ""),
+        ("refresh_interval", 10, ""),
+        ("model_uuid", "cdcaed9f-336d-47d3-83ba-d9ea9047b18c", "nope"),
+        (
+            "scale",
+            "0:1:kubernetes-worker",
+            "1:0:kubernetes-worker",
+        ),
+    ],
+)
+def test_config_changed_individually(opt, valid, invalid, harness):
+    default = 5 if opt == "refresh_interval" else ""
+    assert harness.charm._stored.juju_config.get(opt) == default
+
+    harness.update_config({f"juju_{opt}": valid})
+    assert harness.charm._stored.juju_config.get(opt) == valid
+    assert harness.model.unit.status == BlockedStatus("Waiting for Juju Configuration")
+
+    if invalid:
+        harness.update_config({f"juju_{opt}": invalid})
+        assert harness.charm._stored.juju_config.get(opt) == valid
+        assert harness.model.unit.status == BlockedStatus(f"juju_{opt} invalid")
+
+    harness.update_config({f"juju_{opt}": default})
+    assert harness.charm._stored.juju_config.get(opt) == default
 
 
 def test_action(harness):

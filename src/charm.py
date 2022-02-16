@@ -19,11 +19,10 @@ from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
 
+from errors import JujuConfigError, JujuEnvironmentError
+from config import validate_juju_config
+
 logger = logging.getLogger(__name__)
-
-
-class JujuEnvironmentError(Exception):
-    pass
 
 
 class KubernetesAutoscalerCharm(CharmBase):
@@ -40,21 +39,21 @@ class KubernetesAutoscalerCharm(CharmBase):
         self.framework.observe(
             self.on.refresh_controller_action, self._on_refresh_controller_action
         )
+
         self._juju_config = [
-            "juju_api_endpoint",
-            "juju_ca_cert",
-            "juju_username",
-            "juju_refresh_interval",
-            "juju_model_uuid",
-            "juju_application",
+            key[len("juju_") :] for key in self.config.keys() if key.startswith("juju_")
         ]
-        self._stored.set_default(juju_api_endpoint=None)
-        self._stored.set_default(juju_ca_cert=None)
-        self._stored.set_default(juju_username=None)
-        self._stored.set_default(juju_password=None)
-        self._stored.set_default(juju_refresh_interval=5)
-        self._stored.set_default(juju_model_uuid=None)
-        self._stored.set_default(juju_application=None)
+        self._stored.set_default(
+            juju_config={
+                "api_endpoints": "",
+                "ca_cert": "",
+                "username": "",
+                "password": "",
+                "refresh_interval": 5,
+                "model_uuid": "",
+                "scale": "",
+            }
+        )
 
     def _on_juju_autoscaler_pebble_ready(self, event):
         """Define and start a workload using the Pebble API."""
@@ -66,23 +65,29 @@ class KubernetesAutoscalerCharm(CharmBase):
             self.unit.status = BlockedStatus(str(e))
             return
 
-    def _on_config_changed(self, _):
-        reevaluate = False
+    def _on_juju_config_changed(self, _):
         juju_config_pairs = (
-            (opt, getattr(self._stored, opt), self.config.get(opt)) for opt in self._juju_config
+            (opt, self._stored.juju_config.get(opt), self.config.get(f"juju_{opt}"))
+            for opt in self._juju_config
         )
         juju_changes = {
-            opt: current
-            for opt, stored, current in juju_config_pairs
-            if stored != current and current is not None
+            opt: potential for opt, stored, potential in juju_config_pairs if stored != potential
         }
-        if juju_changes:
-            reevaluate = True
-            logger.debug("found new juju settings: %s", ",".join(juju_changes))
-            for opt, current in juju_changes.items():
-                setattr(self._stored, opt, current)
+        if not juju_changes:
+            return
 
-        if not reevaluate:
+        logger.info("found new juju settings: %s", ",".join(juju_changes))
+        for opt, potential in juju_changes.items():
+            invalidated = validate_juju_config(opt, potential)
+            if isinstance(invalidated, JujuConfigError):
+                return invalidated
+            else:
+                self._stored.juju_config[opt] = invalidated
+
+    def _on_config_changed(self, _):
+        juju_invalid = self._on_juju_config_changed(_)
+        if juju_invalid:
+            self.unit.status = juju_invalid
             return
 
         try:
