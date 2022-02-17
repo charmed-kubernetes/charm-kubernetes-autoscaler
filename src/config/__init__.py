@@ -20,14 +20,31 @@ class JujuStoredState:
         self._stored.set_default(
             juju_config={key: _default for key, (_type, _default) in self._types.items()}
         )
+        self._cached = {}
 
     def __getitem__(self, item):
-        _type, _default = self._types[item]
-        return _type(self._stored.juju_config[item])
+        if item not in self._types:
+            raise KeyError(item)
+
+        try:
+            value = self._cached[item]
+        except KeyError:
+            _type, _default = self._types[item]
+            value = _type(self._stored.juju_config[item])
+            self._cached[item] = value
+        return value
 
     def __setitem__(self, item, value):
         _type, _default = self._types[item]
-        self._stored.juju_config[item] = type(_default)(value)
+        if isinstance(value, _type):
+            self._cached[item] = value
+            self._stored.juju_config[item] = type(_default)(value)
+        elif isinstance(value, type(_default)):
+            self._cached[item] = _type(value)
+            self._stored.juju_config[item] = value
+        else:
+            raise TypeError(f"value {value} must be of type {'or '.join([_type, type(_default)])}")
+
         return value
 
     def validate(self, item, potential):

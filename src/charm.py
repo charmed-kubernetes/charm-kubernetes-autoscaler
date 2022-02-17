@@ -90,12 +90,7 @@ class KubernetesAutoscalerCharm(CharmBase):
         autoscaler = AutoScaler().apply_juju(self._modeled)
         container.add_layer("juju-autoscaler", autoscaler.layer, combine=True)
         container.push(
-            "/opt/autoscaler/autoscaler.conf",
-            autoscaler.conf,
-            permissions=0o600,
-            user_id=0,
-            group_id=0,
-            make_dirs=True,
+            *autoscaler.secrets_file, permissions=0o600, user_id=0, group_id=0, make_dirs=True
         )
         container.autostart()
         self.unit.status = ActiveStatus("Ready to Scale")

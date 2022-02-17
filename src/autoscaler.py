@@ -58,5 +58,5 @@ class AutoScaler:
         }
 
     @property
-    def conf(self):
-        return yaml.safe_dump(self.secrets)
+    def secrets_file(self):
+        return "/opt/autoscaler/autoscaler.conf", yaml.safe_dump(self.secrets)
