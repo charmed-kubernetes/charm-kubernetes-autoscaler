@@ -19,17 +19,17 @@ from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
 
-from errors import JujuConfigError, JujuEnvironmentError
 from autoscaler import AutoScaler
-from config import JujuCaCert, JujuController, JujuModel, JujuScale, validate_juju_config
+from config import JujuStoredState
+from errors import JujuConfigError, JujuEnvironmentError
 
 logger = logging.getLogger(__name__)
 
 
 class KubernetesAutoscalerCharm(CharmBase):
-    """Charm the service."""
-
     _stored = StoredState()
+
+    """Charm the service."""
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -44,17 +44,7 @@ class KubernetesAutoscalerCharm(CharmBase):
         self._juju_config = [
             key[len("juju_") :] for key in self.config.keys() if key.startswith("juju_")
         ]
-        self._stored.set_default(
-            juju_config={
-                "api_endpoints": JujuController(""),
-                "ca_cert": JujuCaCert(""),
-                "username": "",
-                "password": "",
-                "refresh_interval": 5,
-                "model_uuid": JujuModel(""),
-                "scale": JujuScale(""),
-            }
-        )
+        self._modeled = JujuStoredState(self._stored)
 
     def _on_juju_autoscaler_pebble_ready(self, event):
         """Define and start a workload using the Pebble API."""
@@ -68,8 +58,7 @@ class KubernetesAutoscalerCharm(CharmBase):
 
     def _on_juju_config_changed(self, _):
         juju_config_pairs = (
-            (opt, self._stored.juju_config.get(opt), self.config.get(f"juju_{opt}"))
-            for opt in self._juju_config
+            (opt, self._modeled[opt], self.config.get(f"juju_{opt}")) for opt in self._juju_config
         )
         juju_changes = {
             opt: potential for opt, stored, potential in juju_config_pairs if stored != potential
@@ -80,7 +69,7 @@ class KubernetesAutoscalerCharm(CharmBase):
         logger.info("found new juju settings: %s", ",".join(juju_changes))
         try:
             for opt, potential in juju_changes.items():
-                self._stored.juju_config[opt] = validate_juju_config(opt, potential)
+                self._modeled.validate(opt, potential)
         except JujuConfigError as e:
             return BlockedStatus(str(e))
 
@@ -98,7 +87,7 @@ class KubernetesAutoscalerCharm(CharmBase):
 
     def _pebble_apply(self, container):
         # Add initial Pebble config layer using the Pebble API
-        autoscaler = AutoScaler().apply_juju(self._stored.juju_config)
+        autoscaler = AutoScaler().apply_juju(self._modeled)
         container.add_layer("juju-autoscaler", autoscaler.layer, combine=True)
         container.push(
             "/opt/autoscaler/autoscaler.conf",

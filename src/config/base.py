@@ -11,3 +11,6 @@ class JujuBase:
         elif isinstance(other, type(self)):
             return other.cfg == self.cfg
         return False
+
+    def __str__(self):
+        return self.cfg
