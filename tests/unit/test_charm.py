@@ -3,6 +3,7 @@
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -99,3 +100,30 @@ def test_juju_autoscaler_pebble_ready_before_config(harness):
         harness.model.unit.get_container("juju-autoscaler").get_service("juju-autoscaler")
     # Ensure we set an BlockedStatus with a reason
     assert harness.model.unit.status == BlockedStatus("Waiting for Juju Configuration")
+
+
+def test_juju_autoscaler_pebble_ready_after_config_minimal(harness):
+    harness.update_config(
+        {
+            "juju_api_endpoints": "1.2.3.4:17070",
+            "juju_username": "alice",
+            "juju_password": "secret",
+            "juju_model_uuid": "cdcaed9f-336d-47d3-83ba-d9ea9047b18c",
+            "juju_scale": "0:3:kubernetes-worker",
+        }
+    )
+    assert harness.model.unit.status == ActiveStatus("Ready to Scale")
+
+    plan = harness.get_container_pebble_plan("juju-autoscaler")
+    text = Path("tests/data/pebble_cfg_minimum.yaml").read_text()
+    assert plan.to_yaml() == text
+
+    container = harness.model.unit.get_container("juju-autoscaler")
+    files = container.list_files("/opt/autoscaler")
+    assert [file.name for file in files] == ["autoscaler.conf"]
+
+    config_file = next(file for file in files if file.name == "autoscaler.conf")
+    assert (config_file.user_id, config_file.group_id) == (0, 0)
+
+    text = Path("tests/data/secrets_cfg_minimum.yaml").read_text()
+    assert container.pull("/opt/autoscaler/autoscaler.conf").read() == text

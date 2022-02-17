@@ -20,7 +20,8 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
 
 from errors import JujuConfigError, JujuEnvironmentError
-from config import validate_juju_config
+from autoscaler import AutoScaler
+from config import JujuCaCert, JujuController, JujuModel, JujuScale, validate_juju_config
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +46,13 @@ class KubernetesAutoscalerCharm(CharmBase):
         ]
         self._stored.set_default(
             juju_config={
-                "api_endpoints": "",
-                "ca_cert": "",
+                "api_endpoints": JujuController(""),
+                "ca_cert": JujuCaCert(""),
                 "username": "",
                 "password": "",
                 "refresh_interval": 5,
-                "model_uuid": "",
-                "scale": "",
+                "model_uuid": JujuModel(""),
+                "scale": JujuScale(""),
             }
         )
 
@@ -60,7 +61,7 @@ class KubernetesAutoscalerCharm(CharmBase):
         # Get a reference the container attribute on the PebbleReadyEvent
         container = event.workload
         try:
-            self._evaluate_environment(container)
+            self._pebble_apply(container)
         except JujuEnvironmentError as e:
             self.unit.status = BlockedStatus(str(e))
             return
@@ -77,12 +78,11 @@ class KubernetesAutoscalerCharm(CharmBase):
             return
 
         logger.info("found new juju settings: %s", ",".join(juju_changes))
-        for opt, potential in juju_changes.items():
-            invalidated = validate_juju_config(opt, potential)
-            if isinstance(invalidated, JujuConfigError):
-                return invalidated
-            else:
-                self._stored.juju_config[opt] = invalidated
+        try:
+            for opt, potential in juju_changes.items():
+                self._stored.juju_config[opt] = validate_juju_config(opt, potential)
+        except JujuConfigError as e:
+            return BlockedStatus(str(e))
 
     def _on_config_changed(self, _):
         juju_invalid = self._on_juju_config_changed(_)
@@ -91,39 +91,23 @@ class KubernetesAutoscalerCharm(CharmBase):
             return
 
         try:
-            self._evaluate_environment(self.model.unit.get_container("juju-autoscaler"))
+            self._pebble_apply(self.model.unit.get_container("juju-autoscaler"))
         except JujuEnvironmentError as e:
             self.unit.status = BlockedStatus(str(e))
             return
 
-    def _juju_environment(self):
-        environment = {env: self.model.config.get(env) for env in self._juju_config}
-        missing_environment = {env for env, val in environment.items() if val is None}
-        if missing_environment:
-            logger.debug("Missing juju-* config : %s", ",".join(missing_environment))
-            raise JujuEnvironmentError("Waiting for Juju Configuration")
-        return environment
-
-    def _evaluate_environment(self, container):
-        environment = self._juju_environment()
-
-        # Define an initial Pebble layer configuration
-        pebble_layer = {
-            "summary": "juju-autoscaler layer",
-            "description": "pebble config layer for juju-autoscaler",
-            "services": {
-                "juju-autoscaler": {
-                    "override": "replace",
-                    "summary": "juju-autoscaler",
-                    "command": "gunicorn -b 0.0.0.0:80 httpbin:app -k gevent",
-                    "startup": "enabled",
-                    "environment": environment,
-                }
-            },
-        }
+    def _pebble_apply(self, container):
         # Add initial Pebble config layer using the Pebble API
-        container.add_layer("juju-autoscaler", pebble_layer, combine=True)
-        # Autostart any services that were defined with startup: enabled
+        autoscaler = AutoScaler().apply_juju(self._stored.juju_config)
+        container.add_layer("juju-autoscaler", autoscaler.layer, combine=True)
+        container.push(
+            "/opt/autoscaler/autoscaler.conf",
+            autoscaler.conf,
+            permissions=0o600,
+            user_id=0,
+            group_id=0,
+            make_dirs=True,
+        )
         container.autostart()
         self.unit.status = ActiveStatus("Ready to Scale")
 

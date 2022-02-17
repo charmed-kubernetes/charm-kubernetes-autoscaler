@@ -1,9 +1,6 @@
-from ops.model import BlockedStatus
-
-
 class JujuEnvironmentError(Exception):
     pass
 
 
-class JujuConfigError(BlockedStatus):
+class JujuConfigError(Exception):
     pass

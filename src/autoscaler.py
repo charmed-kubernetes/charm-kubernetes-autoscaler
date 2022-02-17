@@ -1,0 +1,61 @@
+from dataclasses import dataclass, field
+import logging
+import yaml
+
+from errors import JujuEnvironmentError
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class AutoScaler:
+    environment: dict[str, str] = field(default_factory=dict)
+    secrets: dict[str, str] = field(default_factory=dict)
+    command: str = ""
+
+    def _build_command(self, scale):
+        if not scale:
+            logger.info("Missing juju-scale config")
+            raise JujuEnvironmentError("Waiting for Juju Configuration")
+        else:
+            args = [f"--nodes {node}" for node in scale]
+            self.command = f"cluster-autoscaler {' '.join(args)}"
+        return self
+
+    def apply_juju(self, juju_config):
+        self._build_command(juju_config["scale"].scale)
+        self.secrets = {
+            "JUJU_USERNAME": juju_config["username"],
+            "JUJU_PASSWORD": juju_config["password"],
+        }
+        self.environment = {
+            "JUJU_API_ENDPOINTS": juju_config["api_endpoints"].cfg,
+            "JUJU_MODEL_UUID": juju_config["model_uuid"].cfg,
+        }
+        missing = {env for env, val in {**self.environment, **self.secrets}.items() if not val}
+        if missing:
+            logger.info("Missing config : %s", ",".join(missing))
+            raise JujuEnvironmentError("Waiting for Juju Configuration")
+
+        self.environment["JUJU_CA_CERT"] = juju_config["ca_cert"].cfg
+        return self
+
+    @property
+    def layer(self):
+        return {
+            "summary": "juju-autoscaler layer",
+            "description": "pebble config layer for juju-autoscaler",
+            "services": {
+                "juju-autoscaler": {
+                    "override": "replace",
+                    "summary": "juju-autoscaler",
+                    "command": self.command,
+                    "startup": "enabled",
+                    "environment": self.environment,
+                }
+            },
+        }
+
+    @property
+    def conf(self):
+        return yaml.safe_dump(self.secrets)

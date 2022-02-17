@@ -3,16 +3,17 @@ from config.controller import JujuController
 from config.ca_cert import JujuCaCert
 from config.model import JujuModel
 
-__all__ = ["JujuScale", "JujuController", "JujuCaCert", "JujuModel"]
-
 
 def validate_juju_config(opt, potential):
     if opt == "scale":
-        return JujuScale.parse(potential)
+        return JujuScale(potential)
     elif opt == "api_endpoints":
-        return JujuController.parse(potential)
+        return JujuController(potential)
     elif opt == "ca_cert":
-        return JujuCaCert.parse(potential)
+        return JujuCaCert(potential)
     elif opt == "model_uuid":
-        return JujuModel.parse(potential)
+        return JujuModel(potential)
     return potential
+
+
+__all__ = ["JujuScale", "JujuController", "JujuCaCert", "JujuModel", "validate_juju_config"]
