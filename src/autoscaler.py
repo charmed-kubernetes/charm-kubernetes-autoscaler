@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 import logging
+from typing import Dict
 import yaml
 
 from errors import JujuEnvironmentError
@@ -9,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AutoScaler:
-    environment: dict[str, str] = field(default_factory=dict)
-    secrets: dict[str, str] = field(default_factory=dict)
+    environment: Dict[str, str] = field(default_factory=dict)
+    secrets: Dict[str, str] = field(default_factory=dict)
     command: str = ""
 
     def _build_command(self, scale):
