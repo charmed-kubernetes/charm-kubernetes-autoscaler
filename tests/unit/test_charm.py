@@ -1,10 +1,7 @@
-# Copyright 2022 Adam Dyess
+# Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 #
-# Learn more about testing at: https://juju.is/docs/sdk/testing
-
 from pathlib import Path
-from unittest.mock import Mock
 
 import pytest
 
@@ -62,19 +59,6 @@ def test_config_changed_individually(opt, valid, invalid, harness):
     assert harness.charm._stored.juju_config.get(opt) == default
 
 
-def test_action(harness):
-    # the harness doesn't (yet!) help much with actions themselves
-    action_event = Mock(params={"fail": ""})
-    harness.charm._on_refresh_controller_action(action_event)
-    assert action_event.set_results.called
-
-
-def test_action_fail(harness):
-    action_event = Mock(params={"fail": "fail this"})
-    harness.charm._on_refresh_controller_action(action_event)
-    assert action_event.fail.call_args == [("fail this",)]
-
-
 def test_juju_autoscaler_pebble_ready_initial_plan(harness):
     # Check the initial Pebble plan is empty
     initial_plan = harness.get_container_pebble_plan("juju-autoscaler")
@@ -112,7 +96,7 @@ def test_juju_autoscaler_pebble_ready_after_config_minimal(harness):
             "juju_scale": "0:3:kubernetes-worker",
         }
     )
-    assert harness.model.unit.status == ActiveStatus("Ready to Scale")
+    assert harness.model.unit.status == ActiveStatus()
 
     plan = harness.get_container_pebble_plan("juju-autoscaler")
     text = Path("tests/data/pebble_cfg_minimum.yaml").read_text()

@@ -4,7 +4,7 @@ from config.ca_cert import JujuCaCert
 from config.model import JujuModel
 
 
-class JujuStoredState:
+class JujuConfig:
     _types = {
         "api_endpoints": (JujuController, ""),
         "ca_cert": (JujuCaCert, ""),
@@ -18,38 +18,36 @@ class JujuStoredState:
     def __init__(self, storage):
         self._stored = storage
         self._stored.set_default(
-            juju_config={key: _default for key, (_type, _default) in self._types.items()}
+            juju_config={key: default for key, (cast, default) in self._types.items()}
         )
         self._cached = {}
 
-    def __getitem__(self, item):
-        if item not in self._types:
-            raise KeyError(item)
+    def load(self, charm):
+        for opt in self._types.keys():
+            charm_cfg = charm.config.get(f"juju_{opt}")
+            stored_cfg = self[opt]
+            if charm_cfg != stored_cfg:
+                self._apply(opt, charm_cfg)
 
+    def __getitem__(self, item):
         try:
             value = self._cached[item]
         except KeyError:
-            _type, _default = self._types[item]
-            value = _type(self._stored.juju_config[item])
+            cast, _default = self._types[item]
+            value = cast(self._stored.juju_config[item])
             self._cached[item] = value
         return value
 
-    def __setitem__(self, item, value):
-        _type, _default = self._types[item]
-        if isinstance(value, _type):
-            self._cached[item] = value
-            self._stored.juju_config[item] = type(_default)(value)
-        elif isinstance(value, type(_default)):
-            self._cached[item] = _type(value)
+    def _apply(self, item, value):
+        cast, as_default = self._types[item]
+        as_default = type(as_default)
+        if isinstance(value, as_default):
+            self._cached[item] = cast(value)
             self._stored.juju_config[item] = value
         else:
-            raise TypeError(f"value {value} must be of type {'or '.join([_type, type(_default)])}")
+            raise TypeError(f"value {value} must be of type {as_default}")
 
         return value
 
-    def validate(self, item, potential):
-        _type, _default = self._types[item]
-        self[item] = _type(potential)
 
-
-__all__ = ["JujuStoredState"]
+__all__ = ["JujuConfig"]

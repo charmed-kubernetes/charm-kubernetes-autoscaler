@@ -15,16 +15,17 @@ class AutoScaler:
     command: str = ""
 
     def _build_command(self, scale):
-        if not scale:
+        node_groups = scale.scale
+        if not node_groups:
             logger.info("Missing juju-scale config")
             raise JujuEnvironmentError("Waiting for Juju Configuration")
         else:
-            args = [f"--nodes {node}" for node in scale]
+            args = [f"--nodes {node}" for node in node_groups]
             self.command = f"cluster-autoscaler {' '.join(args)}"
         return self
 
     def apply_juju(self, juju_config):
-        self._build_command(juju_config["scale"].scale)
+        self._build_command(juju_config["scale"])
         self.secrets = {
             "JUJU_USERNAME": juju_config["username"],
             "JUJU_PASSWORD": juju_config["password"],
@@ -60,3 +61,7 @@ class AutoScaler:
     @property
     def secrets_file(self):
         return "/opt/autoscaler/autoscaler.conf", yaml.safe_dump(self.secrets)
+
+    @property
+    def secrets_permissions(self):
+        return dict(permissions=0o600, user_id=0, group_id=0)
