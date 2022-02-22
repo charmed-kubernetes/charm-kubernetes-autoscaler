@@ -33,17 +33,16 @@ def harness():
             "",
         ),
         ("password", "secret", ""),
-        ("refresh_interval", 10, ""),
-        ("model_uuid", "cdcaed9f-336d-47d3-83ba-d9ea9047b18c", "nope"),
+        ("default_model_uuid", "cdcaed9f-336d-47d3-83ba-d9ea9047b18c", "nope"),
         (
             "scale",
-            "0:1:kubernetes-worker",
-            "1:0:kubernetes-worker",
+            "- 0:1:kubernetes-worker",
+            "- 1:0:kubernetes-worker",
         ),
     ],
 )
 def test_config_changed_individually(opt, valid, invalid, harness):
-    default = 5 if opt == "refresh_interval" else ""
+    default = ""
     assert harness.charm._stored.juju_config.get(opt) == default
 
     harness.update_config({f"juju_{opt}": valid})
@@ -53,7 +52,7 @@ def test_config_changed_individually(opt, valid, invalid, harness):
     if invalid:
         harness.update_config({f"juju_{opt}": invalid})
         assert harness.charm._stored.juju_config.get(opt) == valid
-        assert harness.model.unit.status == BlockedStatus(f"juju_{opt} invalid")
+        assert harness.model.unit.status.message.startswith(f"juju_{opt} invalid")
 
     harness.update_config({f"juju_{opt}": default})
     assert harness.charm._stored.juju_config.get(opt) == default
@@ -92,8 +91,8 @@ def test_juju_autoscaler_pebble_ready_after_config_minimal(harness):
             "juju_api_endpoints": "1.2.3.4:17070",
             "juju_username": "alice",
             "juju_password": "secret",
-            "juju_model_uuid": "cdcaed9f-336d-47d3-83ba-d9ea9047b18c",
-            "juju_scale": "0:3:kubernetes-worker",
+            "juju_default_model_uuid": "cdcaed9f-336d-47d3-83ba-d9ea9047b18c",
+            "juju_scale": "- 0:3:kubernetes-worker",
         }
     )
     assert harness.model.unit.status == ActiveStatus()

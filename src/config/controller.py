@@ -1,4 +1,5 @@
 import logging
+import os
 from errors import JujuConfigError
 from config.base import JujuBase
 
@@ -20,8 +21,10 @@ class JujuController(JujuBase):
 
     def __init__(self, cfg):
         super().__init__(cfg)
+        if cfg == "":
+            cfg = os.environ.get("JUJU_API_ADDRESSES") or ""
         if cfg.strip() != "":
-            connections = [parts.strip().split(":") for parts in cfg.split(",")]
+            connections = [parts.strip().split(":") for parts in cfg.split(",") if parts]
             failures = [fails for fails in map(self.invalid, connections) if fails]
             if failures:
                 logger.error("invalid juju_api_endpoints configuration: %s", ", ".join(failures))

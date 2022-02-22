@@ -6,7 +6,14 @@ options:
     type: string
     default: ""
     description: |
-      Juju controller API endpoints separated by commas
+      In order to add and remove juju units, provide the api endpoints of each juju controller
+      which contains the model/application in which to scale. By leaving empty, the application
+      will scale according to the current juju controller's api endpoints.
+      
+      multiple endpoints may be provided by separating with commas
+      example)
+      juju_api_endpoint: '10.2.3.7:17070, 10.2.3.8:17070, 10.2.3.9:17070'
+      juju_api_endpoint: 'my-juju-controller:17070'
   juju_ca_cert:
     type: string
     default: ""
@@ -16,28 +23,41 @@ options:
     type: string
     default: ""
     description: |
-      Juju account username
+      Juju account username associated with the controller
   juju_password:
     type: string
     default: ""
     description: |
-      Juju account password
-  juju_refresh_interval:
-    type: int
-    default: 5
-    description: |
-      How often to sync against the Juju model.
-  juju_model_uuid:
+      Juju account password associated with the controller
+  juju_default_model_uuid:
     type: string
     default: ""
     description: |
-      Juju model UUID
+      Juju Model UUID to use if not explicity specified by `juju_scale`.
   juju_scale:
     type: string
     default: ""
     description: |
-      Comma separated list of applications to scale prefixed with the minimum and maximum within that node-group.
+      yaml | json list associated with the autoscaler node-groups define parameters about the node-group.  
+      Each item in the node-group list can be defined as the following yaml or json structure with the
+      necessary components:
+        min         [REQUIRED] # minimum number of workers within the node-group, must be a non-negative integer
+        max         [REQUIRED] # maximum number of workers within the node-group, must be an integer >= min 
+        application [REQUIRED] # name of the application within the juju model to scale up or down
+        model       [OPTIONAL] # name of the model within which the associated application is deployed.
+                               # if unspecified, defaults to the value within `juju_default_model_uuid`
+                               # if model is still unspecified, this node-group will simply be ignored
       
       example)
-      3:10:kubernetes-worker-amd64, 0:3:kubernetes-worker-arm64, 0:3:kubernetes-worker-s390x, 0:3:kubernetes-worker-gpu
-
+        cat << EOF > scale.yaml
+        ---
+        -                                                                    # explicit model
+          application: kubernetes-worker-amd64
+          max: 10
+          min: 3
+          model: cdcaed9f-336d-47d3-83ba-d9ea9047b18c                        
+        - {"min": 0, "max": 3, "application": "kubernetes-worker-amd64"}     # default model
+        - "0:3:kubernetes-worker-gpu"                                        # default model
+        - "0:3:cdcaed9f-336d-47d3-83ba-d9ea9047b18c:kubernetes-worker-s390x" # explicit model
+        EOF
+        juju config juju_scale="$(cat scale.yaml)"

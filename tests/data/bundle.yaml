@@ -3,9 +3,7 @@ applications:
   kubernetes-autoscaler:
     charm: {{charm}}
     options:
-      juju_api_endpoints: {{juju_args['juju_api_endpoints']}}
       juju_ca_cert: {{juju_args['juju_ca_cert']}}
-      juju_model_uuid: {{juju_args['juju_model_uuid']}}
       juju_username: {{juju_args['juju_username']}}
       juju_password: {{juju_args['juju_password']}}
       juju_scale: '0:1:scale-app'

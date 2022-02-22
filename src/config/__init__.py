@@ -10,8 +10,7 @@ class JujuConfig:
         "ca_cert": (JujuCaCert, ""),
         "username": (str, ""),
         "password": (str, ""),
-        "refresh_interval": (int, 5),
-        "model_uuid": (JujuModel, ""),
+        "default_model_uuid": (JujuModel, ""),
         "scale": (JujuScale, ""),
     }
 

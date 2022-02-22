@@ -14,8 +14,8 @@ class AutoScaler:
     secrets: Dict[str, str] = field(default_factory=dict)
     command: str = ""
 
-    def _build_command(self, scale):
-        node_groups = scale.scale
+    def _build_command(self, model, scale):
+        node_groups = scale.args(default_model=model.cfg)
         if not node_groups:
             logger.info("Missing juju-scale config")
             raise JujuEnvironmentError("Waiting for Juju Configuration")
@@ -25,14 +25,13 @@ class AutoScaler:
         return self
 
     def apply_juju(self, juju_config):
-        self._build_command(juju_config["scale"])
+        self._build_command(juju_config["default_model_uuid"], juju_config["scale"])
         self.secrets = {
             "JUJU_USERNAME": juju_config["username"],
             "JUJU_PASSWORD": juju_config["password"],
         }
         self.environment = {
             "JUJU_API_ENDPOINTS": juju_config["api_endpoints"].cfg,
-            "JUJU_MODEL_UUID": juju_config["model_uuid"].cfg,
         }
         missing = {env for env, val in {**self.environment, **self.secrets}.items() if not val}
         if missing:

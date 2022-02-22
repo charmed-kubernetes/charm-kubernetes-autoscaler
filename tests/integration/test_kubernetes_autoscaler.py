@@ -11,11 +11,7 @@ async def test_build_and_deploy(ops_test):
     juju_info = await ops_test._controller.info()
     cacert = base64.b64encode(juju_info["results"][0]["cacert"].encode("utf-8")).decode()
     juju_args = {
-        "juju_api_endpoints": ",".join(
-            addr for _ in juju_info["results"] for addr in _["addresses"]
-        ),
         "juju_ca_cert": cacert,
-        "juju_model_uuid": ops_test.model.uuid,
         "juju_username": "alice",
         "juju_password": "bob",
     }

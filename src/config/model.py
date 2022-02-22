@@ -13,5 +13,5 @@ class JujuModel(JujuBase):
             try:
                 uuid.UUID(cfg)
             except ValueError as err:
-                logger.exception("invalid juju_model_uuid configuration: %s", err)
-                raise JujuConfigError("juju_model_uuid invalid") from err
+                logger.exception("invalid juju_default_model_uuid configuration: %s", err)
+                raise JujuConfigError("juju_default_model_uuid invalid") from err

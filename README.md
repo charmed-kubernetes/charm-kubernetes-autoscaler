@@ -13,16 +13,17 @@ but will grow and shrink as demand requires
 
 examples)
 ```yaml
-scale: '3:5:kubernetes-worker'        # indicates 3 to 5 nodes
+juju_default_model_uuid: "cdcaed9f-336d-47d3-83ba-d9ea9047b18c" # within this juju model
+juju_scale: '- 3:5:kubernetes-worker'          # indicate 3 to 5 kubernetes-worker nodes
 ```
 
 ```yaml
-scale: '0:10:kubernetes-worker-gpu'   # indicates 0 to 10 nodes of GPU based workers
+juju_scale: '- 0:10:kubernetes-worker-gpu'   # indicates 0 to 10 nodes of GPU based workers
 ```
 
 ```yaml
-# indicates 0 to 10 nodes of GPU based workers and 3:5 vanilla worker nodes
-scale: '0:10:kubernetes-worker-gpu, 3:5:kubernetes-worker'
+# indicates 0 to 10 nodes of GPU based workers and 3 to 5 vanilla worker nodes
+juju_scale: '["0:10:kubernetes-worker-gpu","3:5:kubernetes-worker"]'
 ```
 
 ## OCI Images
