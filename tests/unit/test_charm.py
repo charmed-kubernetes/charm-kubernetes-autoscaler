@@ -3,6 +3,7 @@
 #
 import base64
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 import yaml
@@ -94,17 +95,17 @@ def test_juju_autoscaler_pebble_ready_after_config_minimal(harness):
     container.push("/cluster-autoscaler", "#!/bin/sh")
     text = Path(testdata, "test_ca.cert").read_text().encode("ascii")
     text = base64.b64encode(text).decode("ascii")
-    harness.update_config(
-        {
-            "juju_api_endpoints": "1.2.3.4:17070",
-            "juju_controller_uuid": "511730b6-55a4-4a9e-84d7-80e46896a2d1",
-            "juju_username": "alice",
-            "juju_password": "secret",
-            "juju_default_model_uuid": "cdcaed9f-336d-47d3-83ba-d9ea9047b18c",
-            "juju_scale": "- 0:3:kubernetes-worker",
-            "juju_ca_cert": text,
-        }
-    )
+    with patch("uuid.uuid4", return_value="511730b6-55a4-4a9e-84d7-80e46896a2d1"):
+        harness.update_config(
+            {
+                "juju_api_endpoints": "1.2.3.4:17070",
+                "juju_username": "alice",
+                "juju_password": "secret",
+                "juju_default_model_uuid": "cdcaed9f-336d-47d3-83ba-d9ea9047b18c",
+                "juju_scale": "- 0:3:kubernetes-worker",
+                "juju_ca_cert": text,
+            }
+        )
     assert harness.model.unit.status == ActiveStatus()
 
     plan = harness.get_container_pebble_plan("juju-autoscaler")

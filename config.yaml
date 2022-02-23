@@ -14,11 +14,6 @@ options:
       example)
       juju_api_endpoint: '10.2.3.7:17070, 10.2.3.8:17070, 10.2.3.9:17070'
       juju_api_endpoint: 'my-juju-controller:17070'
-  juju_controller_uuid:
-    type: string
-    default: ""
-    description: |
-      Juju controller UUID
   juju_ca_cert:
     type: string
     default: ""

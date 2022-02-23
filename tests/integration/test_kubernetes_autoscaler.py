@@ -10,10 +10,8 @@ log = logging.getLogger(__name__)
 async def test_build_and_deploy(ops_test):
     connection = ops_test.model.connection()
     cacert = base64.b64encode(connection.cacert.encode("ascii")).decode("ascii")
-    controller_uuid = connection.info["controller-tag"].split("-", 1)[-1]
     juju_args = {
         "juju_api_endpoints": connection.endpoint,
-        "juju_controller_uuid": controller_uuid,
         "juju_ca_cert": cacert,
         "juju_default_model_uuid": connection.uuid,
         "juju_username": connection.username,

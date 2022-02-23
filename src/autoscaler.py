@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass, field
 import logging
 from pathlib import Path
@@ -36,7 +37,7 @@ class AutoScaler:
         }
         self.controller_data = {
             "api-endpoints": juju_config["api_endpoints"].endpoints,
-            "uuid": juju_config["controller_uuid"].cfg,
+            "uuid": str(uuid.uuid4()),  # juju CLI requires a random unique uuid
             "ca-cert": juju_config["ca_cert"].decoded,
         }
         missing = {env for env, val in {**self.controller_data, **self.secrets}.items() if not val}

@@ -8,7 +8,6 @@ from config.uuid import JujuUUID
 class JujuConfig:
     _types = {
         "api_endpoints": (JujuController, ""),
-        "controller_uuid": (partial(JujuUUID, "juju_controller_uuid"), ""),
         "ca_cert": (JujuCaCert, ""),
         "username": (str, ""),
         "password": (str, ""),
