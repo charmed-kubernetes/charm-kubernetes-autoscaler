@@ -44,7 +44,6 @@ class AutoScaler:
         if missing:
             logger.info("Missing config : %s", ",".join(missing))
             raise JujuEnvironmentError(f"Waiting for Juju Configuration: {','.join(missing)}")
-
         return self
 
     @property
@@ -82,7 +81,7 @@ class AutoScaler:
         return "/root/.local/share/juju/accounts.yaml", yaml.safe_dump(self.accounts)
 
     @property
-    def accounts_permissions(self):
+    def root_owned(self):
         return dict(permissions=0o600, user_id=0, group_id=0)
 
     @property
@@ -90,9 +89,5 @@ class AutoScaler:
         return {"controllers": {"scaler-controller": {**self.controller_data}}}
 
     @property
-    def controllers_file(self):
+    def controller_file(self):
         return "/root/.local/share/juju/controllers.yaml", yaml.safe_dump(self.controllers)
-
-    @property
-    def controllers_permissions(self):
-        return dict(permissions=0o600, user_id=0, group_id=0)

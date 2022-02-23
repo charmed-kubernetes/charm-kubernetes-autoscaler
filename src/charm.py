@@ -60,18 +60,12 @@ class KubernetesAutoscalerCharm(CharmBase):
         path, file = autoscaler.binary.parent, autoscaler.binary.name
         executable = container.list_files(path, pattern=file + "*")
         if not executable:
-            self.unit.status = BlockedStatus(
-                f"Container image missing executable: {autoscaler.binary}"
-            )
+            self.unit.status = BlockedStatus(f"Image missing executable: {autoscaler.binary}")
             return
 
         container.add_layer(self.CONTAINER, autoscaler.layer, combine=True)
-        container.push(
-            *autoscaler.accounts_file, make_dirs=True, **autoscaler.accounts_permissions
-        )
-        container.push(
-            *autoscaler.controllers_file, make_dirs=True, **autoscaler.controllers_permissions
-        )
+        container.push(*autoscaler.accounts_file, make_dirs=True, **autoscaler.root_owned)
+        container.push(*autoscaler.controller_file, make_dirs=True, **autoscaler.root_owned)
 
         container.autostart()
         self.unit.status = ActiveStatus()

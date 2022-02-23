@@ -21,32 +21,30 @@ def _juju_scale_model_uuid(model, full_cfg):
 
 class JujuScale(JujuBase):
     @staticmethod
-    def str_parser(to_parse):
-        by_colons = to_parse.split(":")
+    def str_parser(cfg):
+        by_colons = cfg.split(":")
         len_by_colons = len(by_colons)
         if len_by_colons < 3:
             raise JujuConfigError(
-                f"{ERROR} Must contain at least 3 parts <min>:<max>:<application> '{to_parse}'"
+                f"{ERROR} Must contain at least 3 parts <min>:<max>:<application> '{cfg}'"
             )
         elif len_by_colons == 3:
             (_min, _max, app), model = by_colons, None
         elif len_by_colons == 4:
             _min, _max, model, app = by_colons
-            model = _juju_scale_model_uuid(model, to_parse)
+            model = _juju_scale_model_uuid(model, cfg)
         else:
             raise JujuConfigError(
-                f"{ERROR} Must contain 4 parts <min>:<max>:<model>:<application> '{to_parse}'"
+                f"{ERROR} Must contain 4 parts <min>:<max>:<model>:<application> '{cfg}'"
             )
         try:
             _min, _max = int(_min), int(_max)
         except ValueError:
             _min, _max = -1, -1
         if _min < 0 or _max < 0:
-            raise JujuConfigError(
-                f"{ERROR} <min> & <max> must be non-negative integers '{to_parse}'"
-            )
+            raise JujuConfigError(f"{ERROR} <min> & <max> must be non-negative integers '{cfg}'")
         if _max <= _min:
-            raise JujuConfigError(f"{ERROR} <min> should be less than <max> '{to_parse}'")
+            raise JujuConfigError(f"{ERROR} <min> should be less than <max> '{cfg}'")
         return SimpleNamespace(min=_min, max=_max, model=model, application=app)
 
     @staticmethod

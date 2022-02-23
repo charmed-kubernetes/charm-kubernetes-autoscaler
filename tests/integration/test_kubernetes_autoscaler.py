@@ -41,7 +41,4 @@ async def test_build_and_deploy(ops_test):
 
 async def test_status(units):
     assert units[0].workload_status == "blocked"
-    assert (
-        units[0].workload_status_message
-        == "Container image missing executable: /cluster-autoscaler"
-    )
+    assert units[0].workload_status_message == "Image missing executable: /cluster-autoscaler"
