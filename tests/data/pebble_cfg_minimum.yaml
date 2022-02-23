@@ -1,9 +1,0 @@
-services:
-  juju-autoscaler:
-    command: cluster-autoscaler --nodes 0:3:cdcaed9f-336d-47d3-83ba-d9ea9047b18c:kubernetes-worker
-    environment:
-      JUJU_API_ENDPOINTS: 1.2.3.4:17070
-      JUJU_CA_CERT: ''
-    override: replace
-    startup: enabled
-    summary: juju-autoscaler

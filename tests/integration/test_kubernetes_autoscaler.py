@@ -8,12 +8,17 @@ log = logging.getLogger(__name__)
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test):
-    juju_info = await ops_test._controller.info()
-    cacert = base64.b64encode(juju_info["results"][0]["cacert"].encode("utf-8")).decode()
+    connection = ops_test.model.connection()
+    cacert = base64.b64encode(connection.cacert.encode("ascii")).decode("ascii")
+    controller_uuid = connection.info["controller-tag"].split("-", 1)[-1]
     juju_args = {
+        "juju_api_endpoints": connection.endpoint,
+        "juju_controller_uuid": controller_uuid,
         "juju_ca_cert": cacert,
-        "juju_username": "alice",
-        "juju_password": "bob",
+        "juju_default_model_uuid": connection.uuid,
+        "juju_username": connection.username,
+        "juju_password": connection.password,
+        "juju_scale": "0:2:scale-app",
     }
 
     log.info("Build Charm...")
@@ -33,9 +38,12 @@ async def test_build_and_deploy(ops_test):
         lambda: "kubernetes-autoscaler" in ops_test.model.applications, timeout=60
     )
 
-    await ops_test.model.wait_for_idle(wait_for_active=True)
+    await ops_test.model.wait_for_idle(wait_for_exact_units=1)
 
 
 async def test_status(units):
-    assert units[0].workload_status == "active"
-    assert units[0].workload_status_message == "Ready to Scale"
+    assert units[0].workload_status == "blocked"
+    assert (
+        units[0].workload_status_message
+        == "Container image missing executable: /cluster-autoscaler"
+    )

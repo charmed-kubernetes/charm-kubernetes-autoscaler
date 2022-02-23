@@ -1,9 +1,11 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 #
+import base64
 from pathlib import Path
 
 import pytest
+import yaml
 
 from charm import KubernetesAutoscalerCharm
 from ops.model import ActiveStatus, BlockedStatus, ModelError
@@ -11,9 +13,10 @@ from ops.testing import Harness
 
 
 @pytest.fixture(scope="function")
-def harness():
+def harness(request):
     harness = Harness(KubernetesAutoscalerCharm)
     harness.begin()
+    harness._backend.model_name = request.node.originalname
     yield harness
     harness.cleanup()
 
@@ -86,27 +89,44 @@ def test_juju_autoscaler_pebble_ready_before_config(harness):
 
 
 def test_juju_autoscaler_pebble_ready_after_config_minimal(harness):
+    testdata = Path("tests/data/pebble_cfg_minimum/")
+    container = harness.model.unit.get_container("juju-autoscaler")
+    container.push("/cluster-autoscaler", "#!/bin/sh")
+    text = Path(testdata, "test_ca.cert").read_text().encode("ascii")
+    text = base64.b64encode(text).decode("ascii")
     harness.update_config(
         {
             "juju_api_endpoints": "1.2.3.4:17070",
+            "juju_controller_uuid": "511730b6-55a4-4a9e-84d7-80e46896a2d1",
             "juju_username": "alice",
             "juju_password": "secret",
             "juju_default_model_uuid": "cdcaed9f-336d-47d3-83ba-d9ea9047b18c",
             "juju_scale": "- 0:3:kubernetes-worker",
+            "juju_ca_cert": text,
         }
     )
     assert harness.model.unit.status == ActiveStatus()
 
     plan = harness.get_container_pebble_plan("juju-autoscaler")
-    text = Path("tests/data/pebble_cfg_minimum.yaml").read_text()
-    assert plan.to_yaml() == text
+    text = Path(testdata, "layer.yaml").read_text()
+    assert plan.to_dict() == yaml.safe_load(text)
 
-    container = harness.model.unit.get_container("juju-autoscaler")
-    files = container.list_files("/opt/autoscaler")
-    assert [file.name for file in files] == ["autoscaler.conf"]
+    files = container.list_files("/root/.local/share/juju")
+    assert [file.name for file in files] == ["accounts.yaml", "controllers.yaml"]
 
-    config_file = next(file for file in files if file.name == "autoscaler.conf")
+    config_file = next(file for file in files if file.name == "accounts.yaml")
     assert (config_file.user_id, config_file.group_id) == (0, 0)
 
-    text = Path("tests/data/secrets_cfg_minimum.yaml").read_text()
-    assert container.pull("/opt/autoscaler/autoscaler.conf").read() == text
+    accounts = yaml.safe_load(Path(testdata, "accounts.yaml").read_text())
+    assert (
+        yaml.safe_load(container.pull("/root/.local/share/juju/accounts.yaml").read()) == accounts
+    )
+
+    controller_file = next(file for file in files if file.name == "controllers.yaml")
+    assert (controller_file.user_id, controller_file.group_id) == (0, 0)
+
+    accounts = yaml.safe_load(Path(testdata, "controllers.yaml").read_text())
+    assert (
+        yaml.safe_load(container.pull("/root/.local/share/juju/controllers.yaml").read())
+        == accounts
+    )

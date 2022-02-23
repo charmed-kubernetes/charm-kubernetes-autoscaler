@@ -5,11 +5,18 @@ import yaml
 
 from errors import JujuConfigError
 from config.base import JujuBase
-from config.model import JujuModel
+from config.uuid import JujuUUID
 
 
 logger = logging.getLogger(__name__)
 ERROR = "juju_scale invalid:"
+
+
+def _juju_scale_model_uuid(model, full_cfg):
+    try:
+        return JujuUUID("model", model)
+    except JujuConfigError:
+        raise JujuConfigError(f"{ERROR} Invalid model part in '{full_cfg}'")
 
 
 class JujuScale(JujuBase):
@@ -25,10 +32,7 @@ class JujuScale(JujuBase):
             (_min, _max, app), model = by_colons, None
         elif len_by_colons == 4:
             _min, _max, model, app = by_colons
-            try:
-                model = JujuModel(model)
-            except JujuConfigError:
-                raise JujuConfigError(f"{ERROR} Invalid model part '{to_parse}'")
+            model = _juju_scale_model_uuid(model, to_parse)
         else:
             raise JujuConfigError(
                 f"{ERROR} Must contain 4 parts <min>:<max>:<model>:<application> '{to_parse}'"
@@ -54,7 +58,7 @@ class JujuScale(JujuBase):
         except KeyError as e:
             raise JujuConfigError(f"{ERROR} missing required element {str(e)}")
         model = to_parse.get("model")
-        model = JujuModel(model) if model else None
+        model = _juju_scale_model_uuid(model, to_parse) if model else None
         return SimpleNamespace(min=_min, max=_max, model=model, application=app)
 
     def parser(self, cfg):
@@ -64,7 +68,7 @@ class JujuScale(JujuBase):
             return self.dict_parser(cfg)
         raise JujuConfigError(f"{ERROR} Unexpected yaml collection type")
 
-    def args(self, default_model=None):
+    def nodes(self, default_model=None):
         return [
             f"{part.min}:{part.max}:{part.model or default_model}:{part.application}"
             for part in self.scale

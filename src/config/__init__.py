@@ -1,16 +1,18 @@
+from functools import partial
 from config.scale import JujuScale
 from config.controller import JujuController
 from config.ca_cert import JujuCaCert
-from config.model import JujuModel
+from config.uuid import JujuUUID
 
 
 class JujuConfig:
     _types = {
         "api_endpoints": (JujuController, ""),
+        "controller_uuid": (partial(JujuUUID, "juju_controller_uuid"), ""),
         "ca_cert": (JujuCaCert, ""),
         "username": (str, ""),
         "password": (str, ""),
-        "default_model_uuid": (JujuModel, ""),
+        "default_model_uuid": (partial(JujuUUID, "juju_default_model_uuid"), ""),
         "scale": (JujuScale, ""),
     }
 

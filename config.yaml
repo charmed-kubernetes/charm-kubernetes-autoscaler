@@ -14,6 +14,11 @@ options:
       example)
       juju_api_endpoint: '10.2.3.7:17070, 10.2.3.8:17070, 10.2.3.9:17070'
       juju_api_endpoint: 'my-juju-controller:17070'
+  juju_controller_uuid:
+    type: string
+    default: ""
+    description: |
+      Juju controller UUID
   juju_ca_cert:
     type: string
     default: ""
@@ -38,16 +43,18 @@ options:
     type: string
     default: ""
     description: |
-      yaml | json list associated with the autoscaler node-groups define parameters about the node-group.  
-      Each item in the node-group list can be defined as the following yaml or json structure with the
-      necessary components:
-        min         [REQUIRED] # minimum number of workers within the node-group, must be a non-negative integer
-        max         [REQUIRED] # maximum number of workers within the node-group, must be an integer >= min 
-        application [REQUIRED] # name of the application within the juju model to scale up or down
-        model       [OPTIONAL] # name of the model within which the associated application is deployed.
-                               # if unspecified, defaults to the value within `juju_default_model_uuid`
-                               # if model is still unspecified, this node-group will simply be ignored
-      
+      yaml or json list associated with the autoscaler node-groups define parameters about 
+      the node-group. Each item in the node-group list can be defined as the following yaml
+      or json structure with the necessary components:
+        min         [REQUIRED] [int] # minimum number of workers within the node-group
+        max         [REQUIRED] [int] # maximum number of workers within the node-group 
+        application [REQUIRED] [str] # name of the application within the juju model 
+                                       to scale up or down
+        model       [OPTIONAL] [str] # name of the model within which the associated 
+                                     # application is deployed. If unspecified, defaults 
+                                     # to the value within `juju_default_model_uuid`.
+                                     # if unspecified, this node-group will simply be ignored
+
       example)
         cat << EOF > scale.yaml
         ---

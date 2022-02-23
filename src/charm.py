@@ -47,17 +47,32 @@ class KubernetesAutoscalerCharm(CharmBase):
 
         try:
             self._juju_config.load(self)
-            autoscaler.apply_juju(self._juju_config)
+            autoscaler.apply_juju(self._juju_config, self)
         except (JujuConfigError, JujuEnvironmentError) as e:
             self.unit.status = BlockedStatus(str(e))
             return
 
         container = self.model.unit.get_container(self.CONTAINER)
-        if not container:
-            self.unit.status = BlockedStatus("Container Not Ready")
+        if not container or not container.can_connect():
+            self.unit.status = WaitingStatus("Container Not Ready")
+            return
+
+        path, file = autoscaler.binary.parent, autoscaler.binary.name
+        executable = container.list_files(path, pattern=file + "*")
+        if not executable:
+            self.unit.status = BlockedStatus(
+                f"Container image missing executable: {autoscaler.binary}"
+            )
+            return
 
         container.add_layer(self.CONTAINER, autoscaler.layer, combine=True)
-        container.push(*autoscaler.secrets_file, make_dirs=True, **autoscaler.secrets_permissions)
+        container.push(
+            *autoscaler.accounts_file, make_dirs=True, **autoscaler.accounts_permissions
+        )
+        container.push(
+            *autoscaler.controllers_file, make_dirs=True, **autoscaler.controllers_permissions
+        )
+
         container.autostart()
         self.unit.status = ActiveStatus()
 

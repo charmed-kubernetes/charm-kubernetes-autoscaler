@@ -1,14 +1,13 @@
+bundle: kubernetes
 description: Bundle to deploy for integration tests
 applications:
   kubernetes-autoscaler:
     charm: {{charm}}
-    options:
-      juju_ca_cert: {{juju_args['juju_ca_cert']}}
-      juju_username: {{juju_args['juju_username']}}
-      juju_password: {{juju_args['juju_password']}}
-      juju_scale: '0:1:scale-app'
+    options: {{juju_args}}
+    scale: 1
     resources:
       juju-autoscaler-image: kennethreitz/httpbin:latest
   scale-app:
     charm: hello-kubecon
+    scale: 1
 relations: []

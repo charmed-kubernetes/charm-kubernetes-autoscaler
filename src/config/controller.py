@@ -4,28 +4,34 @@ from errors import JujuConfigError
 from config.base import JujuBase
 
 logger = logging.getLogger(__name__)
+ERROR = "juju_api_endpoints invalid:"
 
 
 class JujuController(JujuBase):
     @staticmethod
-    def invalid(address_port):
+    def invalid(cfg):
+        address_port = cfg.split(":")
         if len(address_port) != 2:
-            return f"Must contain 2 parts <address>:<port> -- {address_port}"
+            raise JujuConfigError(
+                f"{ERROR} Must contain 2 parts <address>:<port> -- {address_port}"
+            )
         address, port = address_port
         try:
             port = int(port)
         except ValueError:
             port = -1
         if not 0 < port < 65535:
-            return f"tcp port is out of bounds -- {address_port}"
+            raise JujuConfigError(f"{ERROR} tcp port is out of bounds -- {address_port}")
+        return cfg
+
+    @property
+    def endpoints(self):
+        if not self._endpoints:
+            return os.environ.get("JUJU_API_ADDRESSES", "").split(" ")
+        return self._endpoints
 
     def __init__(self, cfg):
         super().__init__(cfg)
-        if cfg == "":
-            cfg = os.environ.get("JUJU_API_ADDRESSES") or ""
+        self._endpoints = []
         if cfg.strip() != "":
-            connections = [parts.strip().split(":") for parts in cfg.split(",") if parts]
-            failures = [fails for fails in map(self.invalid, connections) if fails]
-            if failures:
-                logger.error("invalid juju_api_endpoints configuration: %s", ", ".join(failures))
-                raise JujuConfigError("juju_api_endpoints invalid")
+            self._endpoints = [self.invalid(parts.strip()) for parts in cfg.split(",") if parts]

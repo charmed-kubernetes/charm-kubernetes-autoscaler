@@ -5,17 +5,17 @@ from errors import JujuConfigError
 
 
 def test_default_scale():
-    assert JujuScale("").args(None) == []
+    assert JujuScale("").nodes(None) == []
 
 
 def test_comma_separated_string():
     scale = JujuScale("3:5:kubernetes-worker,0:10:kubernetes-worker-gpu,")
-    assert scale.args("test") == ["3:5:test:kubernetes-worker", "0:10:test:kubernetes-worker-gpu"]
+    assert scale.nodes("test") == ["3:5:test:kubernetes-worker", "0:10:test:kubernetes-worker-gpu"]
 
 
 def test_list_of_strings_yaml():
     scale = JujuScale("---\n" "- 3:5:kubernetes-worker\n" "- 0:10:kubernetes-worker-gpu\n")
-    assert scale.args("test") == ["3:5:test:kubernetes-worker", "0:10:test:kubernetes-worker-gpu"]
+    assert scale.nodes("test") == ["3:5:test:kubernetes-worker", "0:10:test:kubernetes-worker-gpu"]
 
 
 def test_list_of_mappings_and_string_yaml():
@@ -26,17 +26,17 @@ def test_list_of_mappings_and_string_yaml():
         "  application: kubernetes-worker\n"
         "- 0:10:kubernetes-worker-gpu\n"
     )
-    assert scale.args("test") == ["3:5:test:kubernetes-worker", "0:10:test:kubernetes-worker-gpu"]
+    assert scale.nodes("test") == ["3:5:test:kubernetes-worker", "0:10:test:kubernetes-worker-gpu"]
 
 
 def test_list_of_strings_json():
     scale = JujuScale('["3:5:kubernetes-worker","0:10:kubernetes-worker-gpu",]')
-    assert scale.args("test") == ["3:5:test:kubernetes-worker", "0:10:test:kubernetes-worker-gpu"]
+    assert scale.nodes("test") == ["3:5:test:kubernetes-worker", "0:10:test:kubernetes-worker-gpu"]
 
 
 def test_yaml_with_model_part():
     scale = JujuScale("- 0:10:cdcaed9f-336d-47d3-83ba-d9ea9047b18c:kubernetes-worker-gpu")
-    assert scale.args(None) == ["0:10:cdcaed9f-336d-47d3-83ba-d9ea9047b18c:kubernetes-worker-gpu"]
+    assert scale.nodes(None) == ["0:10:cdcaed9f-336d-47d3-83ba-d9ea9047b18c:kubernetes-worker-gpu"]
 
 
 def test_error_yaml_mapping():
@@ -73,37 +73,36 @@ def test_error_max_gt_min():
 
 
 def test_error_min_not_an_int():
-    args = "X:3:kubernetes-worker"
+    cfg = "X:3:kubernetes-worker"
     with pytest.raises(JujuConfigError) as ie:
-        JujuScale(args)
+        JujuScale(cfg)
     assert (
-        str(ie.value)
-        == f"juju_scale invalid: <min> & <max> must be non-negative integers '{args}'"
+        str(ie.value) == f"juju_scale invalid: <min> & <max> must be non-negative integers '{cfg}'"
     )
 
 
 def test_error_not_enough_parts():
-    args = "0:kubernetes-worker"
+    cfg = "0:kubernetes-worker"
     with pytest.raises(JujuConfigError) as ie:
-        JujuScale(args)
+        JujuScale(cfg)
     assert (
         str(ie.value)
-        == f"juju_scale invalid: Must contain at least 3 parts <min>:<max>:<application> '{args}'"
+        == f"juju_scale invalid: Must contain at least 3 parts <min>:<max>:<application> '{cfg}'"
     )
 
 
 def test_error_too_many_parts():
-    args = "0:1:2:3:kubernetes-worker"
+    cfg = "0:1:2:3:kubernetes-worker"
     with pytest.raises(JujuConfigError) as ie:
-        JujuScale(args)
+        JujuScale(cfg)
     assert (
         str(ie.value)
-        == f"juju_scale invalid: Must contain 4 parts <min>:<max>:<model>:<application> '{args}'"
+        == f"juju_scale invalid: Must contain 4 parts <min>:<max>:<model>:<application> '{cfg}'"
     )
 
 
 def test_error_model_invalid_part():
-    args = "0:1:2:kubernetes-worker"
+    cfg = "0:1:2:kubernetes-worker"
     with pytest.raises(JujuConfigError) as ie:
-        JujuScale(args)
-    assert str(ie.value) == f"juju_scale invalid: Invalid model part '{args}'"
+        JujuScale(cfg)
+    assert str(ie.value) == f"juju_scale invalid: Invalid model part in '{cfg}'"

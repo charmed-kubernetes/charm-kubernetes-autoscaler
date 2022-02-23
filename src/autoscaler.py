@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 import logging
+from pathlib import Path
 from typing import Dict
 import yaml
 
@@ -10,35 +11,39 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AutoScaler:
-    environment: Dict[str, str] = field(default_factory=dict)
+    controller_data: Dict[str, str] = field(default_factory=dict)
     secrets: Dict[str, str] = field(default_factory=dict)
     command: str = ""
 
-    def _build_command(self, model, scale):
-        node_groups = scale.args(default_model=model.cfg)
+    def _build_command(self, juju_config, charm):
+        model, scale = juju_config["default_model_uuid"], juju_config["scale"]
+        node_groups = scale.nodes(default_model=model.cfg)
         if not node_groups:
             logger.info("Missing juju-scale config")
             raise JujuEnvironmentError("Waiting for Juju Configuration")
-        else:
-            args = [f"--nodes {node}" for node in node_groups]
-            self.command = f"cluster-autoscaler {' '.join(args)}"
+
+        nodes_args = " ".join([f"--nodes {node}" for node in node_groups])
+        namespace_args = f"--namespace {charm.model.name.strip()}"
+
+        self.command = f"{self.binary} {nodes_args} {namespace_args}"
         return self
 
-    def apply_juju(self, juju_config):
-        self._build_command(juju_config["default_model_uuid"], juju_config["scale"])
+    def apply_juju(self, juju_config, charm):
+        self._build_command(juju_config, charm)
         self.secrets = {
-            "JUJU_USERNAME": juju_config["username"],
-            "JUJU_PASSWORD": juju_config["password"],
+            "user": juju_config["username"],
+            "password": juju_config["password"],
         }
-        self.environment = {
-            "JUJU_API_ENDPOINTS": juju_config["api_endpoints"].cfg,
+        self.controller_data = {
+            "api-endpoints": juju_config["api_endpoints"].endpoints,
+            "uuid": juju_config["controller_uuid"].cfg,
+            "ca-cert": juju_config["ca_cert"].decoded,
         }
-        missing = {env for env, val in {**self.environment, **self.secrets}.items() if not val}
+        missing = {env for env, val in {**self.controller_data, **self.secrets}.items() if not val}
         if missing:
             logger.info("Missing config : %s", ",".join(missing))
-            raise JujuEnvironmentError("Waiting for Juju Configuration")
+            raise JujuEnvironmentError(f"Waiting for Juju Configuration: {','.join(missing)}")
 
-        self.environment["JUJU_CA_CERT"] = juju_config["ca_cert"].cfg
         return self
 
     @property
@@ -52,15 +57,41 @@ class AutoScaler:
                     "summary": "juju-autoscaler",
                     "command": self.command,
                     "startup": "enabled",
-                    "environment": self.environment,
                 }
             },
         }
 
     @property
-    def secrets_file(self):
-        return "/opt/autoscaler/autoscaler.conf", yaml.safe_dump(self.secrets)
+    def binary(self):
+        return Path("/", "cluster-autoscaler")
 
     @property
-    def secrets_permissions(self):
+    def accounts(self):
+        return {
+            "controllers": {
+                "scaler-controller": {
+                    **self.secrets,
+                    "last-known-access": "superuser",
+                }
+            }
+        }
+
+    @property
+    def accounts_file(self):
+        return "/root/.local/share/juju/accounts.yaml", yaml.safe_dump(self.accounts)
+
+    @property
+    def accounts_permissions(self):
+        return dict(permissions=0o600, user_id=0, group_id=0)
+
+    @property
+    def controllers(self):
+        return {"controllers": {"scaler-controller": {**self.controller_data}}}
+
+    @property
+    def controllers_file(self):
+        return "/root/.local/share/juju/controllers.yaml", yaml.safe_dump(self.controllers)
+
+    @property
+    def controllers_permissions(self):
         return dict(permissions=0o600, user_id=0, group_id=0)
