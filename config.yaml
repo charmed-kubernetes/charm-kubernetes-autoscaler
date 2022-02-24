@@ -1,14 +1,65 @@
-# Copyright 2022 Adam Dyess
+# Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-#
-# TEMPLATE-TODO: change this example to suit your needs.
-# If you don't need a config, you can remove the file entirely.
-# It ties in to the example _on_config_changed handler in src/charm.py
-#
-# Learn more about config at: https://juju.is/docs/sdk/config
 
 options:
-  thing:
-    default: 🎁
-    description: A thing used by the charm.
+  juju_api_endpoints:
     type: string
+    default: ""
+    description: |
+      In order to add and remove juju units, provide the api endpoints of each juju controller
+      which contains the model/application in which to scale. By leaving empty, the application
+      will scale according to the current juju controller's api endpoints.
+      
+      multiple endpoints may be provided by separating with commas
+      example)
+      juju_api_endpoint: '10.2.3.7:17070, 10.2.3.8:17070, 10.2.3.9:17070'
+      juju_api_endpoint: 'my-juju-controller:17070'
+  juju_ca_cert:
+    type: string
+    default: ""
+    description: |
+      Juju controller CA certificate (base64 encoded)
+  juju_username:
+    type: string
+    default: ""
+    description: |
+      Juju account username associated with the controller
+  juju_password:
+    type: string
+    default: ""
+    description: |
+      Juju account password associated with the controller
+  juju_default_model_uuid:
+    type: string
+    default: ""
+    description: |
+      Juju Model UUID to use if not explicity specified by `juju_scale`.
+  juju_scale:
+    type: string
+    default: ""
+    description: |
+      yaml or json list associated with the autoscaler node-groups define parameters about 
+      the node-group. Each item in the node-group list can be defined as the following yaml
+      or json structure with the necessary components:
+        min         [REQUIRED] [int] # minimum number of workers within the node-group
+        max         [REQUIRED] [int] # maximum number of workers within the node-group 
+        application [REQUIRED] [str] # name of the application within the juju model 
+                                       to scale up or down
+        model       [OPTIONAL] [str] # name of the model within which the associated 
+                                     # application is deployed. If unspecified, defaults 
+                                     # to the value within `juju_default_model_uuid`.
+                                     # if unspecified, this node-group will simply be ignored
+
+      example)
+        cat << EOF > scale.yaml
+        ---
+        -                                                                    # explicit model
+          application: kubernetes-worker-amd64
+          max: 10
+          min: 3
+          model: cdcaed9f-336d-47d3-83ba-d9ea9047b18c                        
+        - {"min": 0, "max": 3, "application": "kubernetes-worker-amd64"}     # default model
+        - "0:3:kubernetes-worker-gpu"                                        # default model
+        - "0:3:cdcaed9f-336d-47d3-83ba-d9ea9047b18c:kubernetes-worker-s390x" # explicit model
+        EOF
+        juju config juju_scale="$(cat scale.yaml)"

@@ -1,23 +1,31 @@
-# Copyright 2022 Adam Dyess
+# Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-# For a complete list of supported options, see:
-# https://juju.is/docs/sdk/metadata-reference
 name: kubernetes-autoscaler
 display-name: |
-  TEMPLATE-TODO: fill out a display name for the Charmcraft store
+  Deploy into an existing kubernetes cluster in order to scale it with juju.
 description: |
-  TEMPLATE-TODO: fill out the charm's description
+  This charm scales an existing juju deployed kubernetes cluster using the 
+  kubernetes cluster autoscaler. 
+    https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler
 summary: |
-  TEMPLATE-TODO: fill out the charm's summary
+  Provide this charm application with credentials to add/remove units from 
+  an existing juju deployed kubernetes, and the cluster will resize number
+  of worker nodes based on the needs of scale. Node groups are defined by
+  the application name in the deployed model.
 
-# TEMPLATE-TODO: replace with containers for your workload (delete for non-k8s)
+  examples)
+   scale = 3:5:kubernetes-worker      # indicates 3 to 5 nodes
+   scale = 0:10 kubernetes-worker-gpu # indicates 0 to 10 nodes of GPU based workers
+  
+  the autoscaler will not create a cluster, but will grow and shrink as demand requires
+
 containers:
-  httpbin:
-    resource: httpbin-image
+  juju-autoscaler:
+    resource: juju-autoscaler-image
 
-# TEMPLATE-TODO: each container defined above must specify an oci-image resource
 resources:
-  httpbin-image:
+  juju-autoscaler-image:
     type: oci-image
-    description: OCI image for httpbin (kennethreitz/httpbin)
+    description: OCI Image for kubernetes-autoscaler with a juju cloud provider.
+    upstream-source: rocks.canonical.com/autoscaling/cluster-autoscaler:v1.23.0+juju0

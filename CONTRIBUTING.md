@@ -1,34 +1,35 @@
 # kubernetes-autoscaler
 
 ## Developing
+Creates and runs unit testing and linting:
 
-Create and activate a virtualenv with the development requirements:
+```bash
+tox -e unit,lint
+```
 
-    virtualenv -p python3 venv
-    source venv/bin/activate
-    pip install -r requirements-dev.txt
+Run integration tests by switching to a kubernetes cluster
 
-## Code overview
+```bash
+juju controllers k8s-controller
+tox -e integration
+```
 
-TEMPLATE-TODO:
-One of the most important things a consumer of your charm (or library)
-needs to know is what set of functionality it provides. Which categories
-does it fit into? Which events do you listen to? Which libraries do you
-consume? Which ones do you export and how are they used?
+Format code with black
+
+```bash
+tox -e blacken
+```
 
 ## Intended use case
 
-TEMPLATE-TODO:
-Why were these decisions made? What's the scope of your charm?
+This charm handles deploying a bare kubernetes cluster-autoscaler able to grow
+and shrink a configured juju-based kubernetes cluster.
 
 ## Roadmap
+There is an intention to expand this charms feature-set to include:
+* monitoring, 
+* statistics, 
+* an exposed service
 
-If this Charm doesn't fulfill all of the initial functionality you were
-hoping for or planning on, please add a Roadmap or TODO here
-
-## Testing
-
-The Python operator framework includes a very nice harness for testing
-operator behaviour without full deployment. Just `run_tests`:
-
-    ./run_tests
+Eventually it should be expanded to deploy just as the upstream helm charts suggest
+with the juju cloud-provider mainlined into the upstream source.

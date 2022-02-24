@@ -1,0 +1,5 @@
+controllers:
+  scaler-controller:
+    last-known-access: superuser
+    user: alice
+    password: secret

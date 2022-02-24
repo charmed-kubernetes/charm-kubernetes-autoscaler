@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2022 Adam Dyess
+# Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 #
 # Learn more at: https://juju.is/docs/sdk
@@ -17,7 +17,11 @@ import logging
 from ops.charm import CharmBase
 from ops.framework import StoredState
 from ops.main import main
-from ops.model import ActiveStatus
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+
+from autoscaler import AutoScaler
+from config import JujuConfig
+from errors import JujuConfigError, JujuEnvironmentError
 
 logger = logging.getLogger(__name__)
 
@@ -26,78 +30,52 @@ class KubernetesAutoscalerCharm(CharmBase):
     """Charm the service."""
 
     _stored = StoredState()
+    CONTAINER = "juju-autoscaler"
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.framework.observe(self.on.httpbin_pebble_ready, self._on_httpbin_pebble_ready)
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(self.on.fortune_action, self._on_fortune_action)
-        self._stored.set_default(things=[])
+        self.framework.observe(self.on.install, self._install_or_upgrade)
+        self.framework.observe(self.on.upgrade_charm, self._install_or_upgrade)
+        self.framework.observe(self.on.juju_autoscaler_pebble_ready, self._install_or_upgrade)
+        self.framework.observe(self.on.config_changed, self._install_or_upgrade)
+        self.framework.observe(self.on.leader_elected, self._set_version)
+        self.framework.observe(self.on.stop, self._cleanup)
+        self._juju_config = JujuConfig(self._stored)
 
-    def _on_httpbin_pebble_ready(self, event):
-        """Define and start a workload using the Pebble API.
+    def _install_or_upgrade(self, _event):
+        autoscaler = AutoScaler()
 
-        TEMPLATE-TODO: change this example to suit your needs.
-        You'll need to specify the right entrypoint and environment
-        configuration for your specific workload. Tip: you can see the
-        standard entrypoint of an existing container using docker inspect
+        try:
+            self._juju_config.load(self)
+            autoscaler.apply_juju(self._juju_config, self)
+        except (JujuConfigError, JujuEnvironmentError) as e:
+            self.unit.status = BlockedStatus(str(e))
+            return
 
-        Learn more about Pebble layers at https://github.com/canonical/pebble
-        """
-        # Get a reference the container attribute on the PebbleReadyEvent
-        container = event.workload
-        # Define an initial Pebble layer configuration
-        pebble_layer = {
-            "summary": "httpbin layer",
-            "description": "pebble config layer for httpbin",
-            "services": {
-                "httpbin": {
-                    "override": "replace",
-                    "summary": "httpbin",
-                    "command": "gunicorn -b 0.0.0.0:80 httpbin:app -k gevent",
-                    "startup": "enabled",
-                    "environment": {"thing": self.model.config["thing"]},
-                }
-            },
-        }
-        # Add initial Pebble config layer using the Pebble API
-        container.add_layer("httpbin", pebble_layer, combine=True)
-        # Autostart any services that were defined with startup: enabled
+        container = self.model.unit.get_container(self.CONTAINER)
+        if not container or not container.can_connect():
+            self.unit.status = WaitingStatus("Container Not Ready")
+            return
+
+        path, file = autoscaler.binary.parent, autoscaler.binary.name
+        executable = container.list_files(path, pattern=file + "*")
+        if not executable:
+            self.unit.status = BlockedStatus(f"Image missing executable: {autoscaler.binary}")
+            return
+
+        container.add_layer(self.CONTAINER, autoscaler.layer, combine=True)
+        container.push(*autoscaler.accounts_file, make_dirs=True, **autoscaler.root_owned)
+        container.push(*autoscaler.controller_file, make_dirs=True, **autoscaler.root_owned)
+
         container.autostart()
-        # Learn more about statuses in the SDK docs:
-        # https://juju.is/docs/sdk/constructs#heading--statuses
         self.unit.status = ActiveStatus()
 
-    def _on_config_changed(self, _):
-        """Just an example to show how to deal with changed configuration.
+    def _set_version(self, _event=None):
+        if self.unit.is_leader():
+            self.unit.set_workload_version("Ready to Scale")
 
-        TEMPLATE-TODO: change this example to suit your needs.
-        If you don't need to handle config, you can remove this method,
-        the hook created in __init__.py for it, the corresponding test,
-        and the config.py file.
-
-        Learn more about config at https://juju.is/docs/sdk/config
-        """
-        current = self.config["thing"]
-        if current not in self._stored.things:
-            logger.debug("found a new thing: %r", current)
-            self._stored.things.append(current)
-
-    def _on_fortune_action(self, event):
-        """Just an example to show how to receive actions.
-
-        TEMPLATE-TODO: change this example to suit your needs.
-        If you don't need to handle actions, you can remove this method,
-        the hook created in __init__.py for it, the corresponding test,
-        and the actions.py file.
-
-        Learn more about actions at https://juju.is/docs/sdk/actions
-        """
-        fail = event.params["fail"]
-        if fail:
-            event.fail(fail)
-        else:
-            event.set_results({"fortune": "A bug in the code is worth two in the documentation."})
+    def _cleanup(self, _):
+        self.unit.status = WaitingStatus("Shutting down")
 
 
 if __name__ == "__main__":
