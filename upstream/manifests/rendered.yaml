@@ -17,18 +17,6 @@ spec:
   
   maxUnavailable: 1
 ---
-# Source: cluster-autoscaler/templates/serviceaccount.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  labels:
-    app.kubernetes.io/instance: "kubernetes-autoscaler"
-    app.kubernetes.io/name: "juju-cluster-autoscaler"
-    app.kubernetes.io/managed-by: "Helm"
-    helm.sh/chart: "cluster-autoscaler-9.15.0"
-  name: kubernetes-autoscaler-juju-cluster-autoscaler
-automountServiceAccountToken: true
----
 # Source: cluster-autoscaler/templates/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -186,7 +174,7 @@ roleRef:
   name: kubernetes-autoscaler-juju-cluster-autoscaler
 subjects:
   - kind: ServiceAccount
-    name: kubernetes-autoscaler-juju-cluster-autoscaler
+    name: juju-application-placeholder
     namespace: juju-namespace-placeholder
 ---
 # Source: cluster-autoscaler/templates/role.yaml
@@ -233,7 +221,7 @@ roleRef:
   name: kubernetes-autoscaler-juju-cluster-autoscaler
 subjects:
   - kind: ServiceAccount
-    name: kubernetes-autoscaler-juju-cluster-autoscaler
+    name: juju-application-placeholder
     namespace: juju-namespace-placeholder
 ---
 # Source: cluster-autoscaler/templates/service.yaml

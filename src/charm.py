@@ -22,6 +22,7 @@ from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from autoscaler import AutoScaler
 from config import JujuConfig
 from errors import JujuConfigError, JujuEnvironmentError
+from manifests import Manifests
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,9 @@ class KubernetesAutoscalerCharm(CharmBase):
         container.push(*autoscaler.accounts_file, make_dirs=True, **autoscaler.root_owned)
         container.push(*autoscaler.controller_file, make_dirs=True, **autoscaler.root_owned)
 
+        manifests = Manifests(self)
+        manifests.apply_manifests()
+
         container.autostart()
         self.unit.status = ActiveStatus()
 
@@ -76,6 +80,8 @@ class KubernetesAutoscalerCharm(CharmBase):
 
     def _cleanup(self, _):
         self.unit.status = WaitingStatus("Shutting down")
+        manifests = Manifests(self)
+        manifests.delete_manifest(ignore_unauthorized=True)
 
 
 if __name__ == "__main__":

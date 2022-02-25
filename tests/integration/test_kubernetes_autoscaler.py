@@ -27,7 +27,7 @@ async def test_build_and_deploy(ops_test):
 
     log.info("Deploy Charm...")
     model = ops_test.model_full_name
-    cmd = f"juju deploy -m {model} {bundle}"
+    cmd = f"juju deploy -m {model} {bundle} --trust"
     rc, stdout, stderr = await ops_test.run(*shlex.split(cmd))
     assert rc == 0, f"Bundle deploy failed: {(stderr or stdout).strip()}"
 
@@ -36,9 +36,9 @@ async def test_build_and_deploy(ops_test):
         lambda: "kubernetes-autoscaler" in ops_test.model.applications, timeout=60
     )
 
-    await ops_test.model.wait_for_idle(wait_for_exact_units=1)
+    await ops_test.model.wait_for_idle(wait_for_active=True)
 
 
 async def test_status(units):
-    assert units[0].workload_status == "blocked"
-    assert units[0].workload_status_message == "Image missing executable: /cluster-autoscaler"
+    assert units[0].workload_status == "active"
+    assert units[0].workload_status_message == ""

@@ -3,10 +3,12 @@
 #
 import base64
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
+import lightkube
 import pytest
 import yaml
+
 
 from charm import KubernetesAutoscalerCharm
 from ops.model import ActiveStatus, BlockedStatus, ModelError
@@ -89,7 +91,14 @@ def test_juju_autoscaler_pebble_ready_before_config(harness):
     assert harness.model.unit.status == BlockedStatus("Waiting for Juju Configuration")
 
 
-def test_juju_autoscaler_pebble_ready_after_config_minimal(harness):
+@pytest.fixture
+def lightkube_client():
+    client = MagicMock()
+    with patch.object(lightkube.Client, "__new__", return_value=client):
+        yield client
+
+
+def test_juju_autoscaler_pebble_ready_after_config_minimal(lightkube_client, harness):
     testdata = Path("tests/data/pebble_cfg_minimum/")
     container = harness.model.unit.get_container("juju-autoscaler")
     container.push("/cluster-autoscaler", "#!/bin/sh")
@@ -131,3 +140,6 @@ def test_juju_autoscaler_pebble_ready_after_config_minimal(harness):
         yaml.safe_load(container.pull("/root/.local/share/juju/controllers.yaml").read())
         == accounts
     )
+
+    lightkube_client.delete.assert_called()
+    lightkube_client.create.assert_called()
