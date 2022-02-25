@@ -4,9 +4,10 @@ applications:
   kubernetes-autoscaler:
     charm: {{charm}}
     options: {{juju_args}}
+    trust: true
     scale: 1
     resources:
-      juju-autoscaler-image: kennethreitz/httpbin:latest
+      juju-autoscaler-image: rocks.canonical.com/cdk/cluster-autoscaler-juju-amd64:dev-2.9.22-build0
   scale-app:
     charm: hello-kubecon
     scale: 1

@@ -4,6 +4,16 @@
 This charm scales an existing juju deployed kubernetes cluster using the 
 [kubernetes cluster autoscaler](kubernetes-auto-scaler) with a juju cloud provider.
 
+## Installation
+Installing the charm from charmhub into a kubernetes cluster
+```bash
+# create a namespace for the autoscaler
+juju add-model kubernetes-cluster-autoscaler
+# deploy the application into the cluster
+juju deploy kubernetes-autoscaler --trust 
+```
+
+
 ## Usage
 Provide this charm application with credentials to add/remove units from 
 an existing juju deployed kubernetes, and the cluster will resize the number
