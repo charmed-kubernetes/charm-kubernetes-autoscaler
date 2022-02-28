@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class JujuBase:
+class ConfigBase:
     cfg: str
 
     def __eq__(self, other):

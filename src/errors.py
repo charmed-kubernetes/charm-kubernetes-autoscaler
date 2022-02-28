@@ -2,5 +2,5 @@ class JujuEnvironmentError(Exception):
     pass
 
 
-class JujuConfigError(Exception):
+class ConfigError(Exception):
     pass

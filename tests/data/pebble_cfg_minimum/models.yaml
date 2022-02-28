@@ -1,0 +1,8 @@
+controllers:
+  scaler-controller:
+    models:
+      admin/controller: {}
+      admin/default:
+        uuid: cdcaed9f-336d-47d3-83ba-d9ea9047b18c
+    current-model: "admin/default"
+

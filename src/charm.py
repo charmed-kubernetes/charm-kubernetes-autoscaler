@@ -20,8 +20,8 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 
 from autoscaler import AutoScaler
-from config import JujuConfig
-from errors import JujuConfigError, JujuEnvironmentError
+from config import JujuConfig, AutoscalerConfig
+from errors import ConfigError, JujuEnvironmentError
 from manifests import Manifests
 
 logger = logging.getLogger(__name__)
@@ -42,14 +42,17 @@ class KubernetesAutoscalerCharm(CharmBase):
         self.framework.observe(self.on.leader_elected, self._set_version)
         self.framework.observe(self.on.stop, self._cleanup)
         self._juju_config = JujuConfig(self._stored)
+        self._autoscaler_config = AutoscalerConfig(self._stored)
 
     def _install_or_upgrade(self, _event):
         autoscaler = AutoScaler()
 
         try:
             self._juju_config.load(self)
-            autoscaler.apply_juju(self._juju_config, self)
-        except (JujuConfigError, JujuEnvironmentError) as e:
+            self._autoscaler_config.load(self)
+            app_config = {**self._juju_config, **self._autoscaler_config}
+            autoscaler.apply(app_config, self)
+        except (ConfigError, JujuEnvironmentError) as e:
             self.unit.status = BlockedStatus(str(e))
             return
 
@@ -64,14 +67,13 @@ class KubernetesAutoscalerCharm(CharmBase):
             self.unit.status = BlockedStatus(f"Image missing executable: {autoscaler.binary}")
             return
 
-        container.add_layer(self.CONTAINER, autoscaler.layer, combine=True)
-        container.push(*autoscaler.accounts_file, make_dirs=True, **autoscaler.root_owned)
-        container.push(*autoscaler.controller_file, make_dirs=True, **autoscaler.root_owned)
+        autoscaler.authorize(container)
 
         manifests = Manifests(self)
         manifests.apply_manifests()
 
         container.autostart()
+        container.restart(container.name)
         self.unit.status = ActiveStatus()
 
     def _set_version(self, _event=None):
