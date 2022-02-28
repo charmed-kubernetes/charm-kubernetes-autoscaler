@@ -67,7 +67,6 @@ juju config kubernetes-autoscaler juju_scale="3:5:kubernetes-worker"
 
 See below for more complicated examples.
 
-examples)
 ```yaml
 juju_default_model_uuid: "cdcaed9f-336d-47d3-83ba-d9ea9047b18c" # within this juju model
 juju_scale: '- 3:5:kubernetes-worker'          # indicate 3 to 5 kubernetes-worker nodes
