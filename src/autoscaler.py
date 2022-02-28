@@ -23,10 +23,11 @@ class AutoScaler:
             logger.info("Missing juju-scale config")
             raise JujuEnvironmentError("Waiting for Juju Configuration")
 
+        provider_args = "--cloud-provider=juju"
         nodes_args = " ".join([f"--nodes {node}" for node in node_groups])
         namespace_args = f"--namespace {charm.model.name.strip()}"
 
-        self.command = f"{self.binary} {nodes_args} {namespace_args}"
+        self.command = f"{self.binary} {provider_args} {nodes_args} {namespace_args}"
         return self
 
     def apply_juju(self, juju_config, charm):
