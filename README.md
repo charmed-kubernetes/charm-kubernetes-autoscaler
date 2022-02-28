@@ -2,7 +2,7 @@
 
 ## Description
 This charm scales an existing juju deployed kubernetes cluster using the 
-[kubernetes cluster autoscaler](kubernetes-auto-scaler) with a juju cloud provider.
+[kubernetes cluster autoscaler][kubernetes-auto-scaler] with a juju cloud provider.
 
 ## Installation
 Installing the charm from charmhub into a kubernetes cluster
@@ -89,4 +89,4 @@ on enhancements to this charm following best practice guidelines, and
 `CONTRIBUTING.md` for developer guidance.
 
 [Links]: <>
-[kubernetes-auto-scaler]: (https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler)
+[kubernetes-auto-scaler]: https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler "upstream docs"
