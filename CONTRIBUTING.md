@@ -26,7 +26,7 @@ charmcraft pack
 CHARM=$(ls *.charm)
 IMAGE=$(cat metadata.yaml |\
         python3 -c 'import yaml; import sys; import json; print(json.dumps(yaml.safe_load(sys.stdin)))' |\
-        jq '.resources["juju-autoscaler-image"]["upstream-source"]')
+        jq -rc '.resources["juju-autoscaler-image"]["upstream-source"]')
 # create a namespace for the autoscaler
 juju add-model kubernetes-cluster-autoscaler
 # deploy the application into the cluster
