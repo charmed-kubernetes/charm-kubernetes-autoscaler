@@ -33,9 +33,7 @@ class AutoScaler:
         extra_args = config["extra_args"].key_values
         extra = ""
         if extra_args:
-            extra = " " + " ".join(
-                sorted(f"--{key}='{value}'" for key, value in extra_args.items())
-            )
+            extra = " " + " ".join(sorted(f"--{key}='{value}'" for key, value in extra_args))
 
         self.command = f"{self.binary} {namespace} {provider} {nodes}{extra}"
         return self

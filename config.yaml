@@ -50,7 +50,7 @@ options:
                                      # to the value within `juju_default_model_uuid`.
                                      # if unspecified, this node-group will simply be ignored
 
-      example)
+      example
         cat << EOF > scale.yaml
         ---
         -                                                                    # explicit model
@@ -62,17 +62,23 @@ options:
         - "0:3:kubernetes-worker-gpu"                                        # default model
         - "0:3:cdcaed9f-336d-47d3-83ba-d9ea9047b18c:kubernetes-worker-s390x" # explicit model
         EOF
-        juju config juju_scale="$(cat scale.yaml)"
+        juju config kubernetes-autoscaler juju_scale="$(cat scale.yaml)"
   autoscaler_extra_args:
     type: string
     default: "{}"
     description: |
       yaml or json mapping of string to use as an extra set arguments provided to cluster-autoscaler service.
+      if an argument can be specified multiple times, for that key specify a list of values 
       
       https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#what-are-the-parameters-to-ca
       
-      example)
-      cat << EOF > args.yaml
-      ---
+      example
+        cat << EOF > args.yaml
+        ---
         scale-down-unneeded-time: 5m0s    # scale down at the 5 min mark
-        v: "5"                            # verbose logging
+        v: 5                              # verbose logging
+        node-group-auto-discovery:
+          - label:foo=bar
+          - label:fizz=buzz
+        EOF
+        juju config kubernetes-autoscaler autoscaler_extra_args="$(cat args.yaml)"
