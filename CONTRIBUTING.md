@@ -20,6 +20,20 @@ Format code with black
 tox -e blacken
 ```
 
+## Test installation locally
+```bash
+charmcraft pack
+CHARM=$(ls *.charm)
+IMAGE=$(cat metadata.yaml |\
+        python3 -c 'import yaml; import sys; import json; print(json.dumps(yaml.safe_load(sys.stdin)))' |\
+        jq '.resources["juju-autoscaler-image"]["upstream-source"]')
+# create a namespace for the autoscaler
+juju add-model kubernetes-cluster-autoscaler
+# deploy the application into the cluster
+juju deploy ./$CHARM kubernetes-autoscaler --trust --resource juju-autoscaler-image=$IMAGE
+# configure the charm according to README.md
+```
+
 ## Intended use case
 
 This charm handles deploying a bare kubernetes cluster-autoscaler able to grow
