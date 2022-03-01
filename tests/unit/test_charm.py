@@ -5,7 +5,6 @@ import base64
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-import lightkube
 import pytest
 import yaml
 
@@ -89,13 +88,6 @@ def test_juju_autoscaler_pebble_ready_before_config(harness):
         harness.model.unit.get_container("juju-autoscaler").get_service("juju-autoscaler")
     # Ensure we set an BlockedStatus with a reason
     assert harness.model.unit.status == BlockedStatus("Waiting for Juju Configuration")
-
-
-@pytest.fixture
-def lightkube_client():
-    client = MagicMock()
-    with patch.object(lightkube.Client, "__new__", return_value=client):
-        yield client
 
 
 @pytest.fixture
