@@ -1,25 +1,25 @@
 import logging
 import os
-from errors import JujuConfigError
-from config.base import JujuBase
+from errors import ConfigError
+from config.base import ConfigBase
 
 logger = logging.getLogger(__name__)
 ERROR = "juju_api_endpoints invalid:"
 
 
-class JujuController(JujuBase):
+class ConfigController(ConfigBase):
     @staticmethod
     def invalid(cfg):
         by_colons = cfg.split(":")
         if len(by_colons) != 2:
-            raise JujuConfigError(f"{ERROR} Must contain 2 parts <address>:<port> -- {cfg}")
+            raise ConfigError(f"{ERROR} Must contain 2 parts <address>:<port> -- {cfg}")
         address, port = by_colons
         try:
             port = int(port)
         except ValueError:
             port = -1
         if not 0 < port < 65535:
-            raise JujuConfigError(f"{ERROR} tcp port is out of bounds -- {cfg}")
+            raise ConfigError(f"{ERROR} tcp port is out of bounds -- {cfg}")
         return cfg
 
     @property

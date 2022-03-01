@@ -3,9 +3,9 @@ import collections
 from types import SimpleNamespace
 import yaml
 
-from errors import JujuConfigError
-from config.base import JujuBase
-from config.uuid import JujuUUID
+from errors import ConfigError
+from config.base import ConfigBase
+from config.uuid import ConfigUUID
 
 
 logger = logging.getLogger(__name__)
@@ -14,18 +14,18 @@ ERROR = "juju_scale invalid:"
 
 def _juju_scale_model_uuid(model, full_cfg):
     try:
-        return JujuUUID("model", model)
-    except JujuConfigError:
-        raise JujuConfigError(f"{ERROR} Invalid model part in '{full_cfg}'")
+        return ConfigUUID("model", model)
+    except ConfigError:
+        raise ConfigError(f"{ERROR} Invalid model part in '{full_cfg}'")
 
 
-class JujuScale(JujuBase):
+class ConfigScale(ConfigBase):
     @staticmethod
     def str_parser(cfg):
         by_colons = cfg.split(":")
         len_by_colons = len(by_colons)
         if len_by_colons < 3:
-            raise JujuConfigError(
+            raise ConfigError(
                 f"{ERROR} Must contain at least 3 parts <min>:<max>:<application> '{cfg}'"
             )
         elif len_by_colons == 3:
@@ -34,7 +34,7 @@ class JujuScale(JujuBase):
             _min, _max, model, app = by_colons
             model = _juju_scale_model_uuid(model, cfg)
         else:
-            raise JujuConfigError(
+            raise ConfigError(
                 f"{ERROR} Must contain 4 parts <min>:<max>:<model>:<application> '{cfg}'"
             )
         try:
@@ -42,9 +42,9 @@ class JujuScale(JujuBase):
         except ValueError:
             _min, _max = -1, -1
         if _min < 0 or _max < 0:
-            raise JujuConfigError(f"{ERROR} <min> & <max> must be non-negative integers '{cfg}'")
+            raise ConfigError(f"{ERROR} <min> & <max> must be non-negative integers '{cfg}'")
         if _max <= _min:
-            raise JujuConfigError(f"{ERROR} <min> should be less than <max> '{cfg}'")
+            raise ConfigError(f"{ERROR} <min> should be less than <max> '{cfg}'")
         return SimpleNamespace(min=_min, max=_max, model=model, application=app)
 
     @staticmethod
@@ -54,7 +54,7 @@ class JujuScale(JujuBase):
             _max = to_parse["max"]
             app = to_parse["application"]
         except KeyError as e:
-            raise JujuConfigError(f"{ERROR} missing required element {str(e)}")
+            raise ConfigError(f"{ERROR} missing required element {str(e)}")
         model = to_parse.get("model")
         model = _juju_scale_model_uuid(model, to_parse) if model else None
         return SimpleNamespace(min=_min, max=_max, model=model, application=app)
@@ -64,7 +64,7 @@ class JujuScale(JujuBase):
             return self.str_parser(cfg)
         elif isinstance(cfg, collections.Mapping):
             return self.dict_parser(cfg)
-        raise JujuConfigError(f"{ERROR} Unexpected yaml collection type")
+        raise ConfigError(f"{ERROR} Unexpected yaml collection type")
 
     def nodes(self, default_model=None):
         return [
@@ -79,7 +79,7 @@ class JujuScale(JujuBase):
             scale = yaml.safe_load(cfg.strip())
         except yaml.YAMLError as e:
             logger.error("invalid juju_scale configuration: %s", cfg)
-            raise JujuConfigError(f"{ERROR} not yaml or json format") from e
+            raise ConfigError(f"{ERROR} not yaml or json format") from e
 
         if scale is None:
             self.scale = []
@@ -90,10 +90,10 @@ class JujuScale(JujuBase):
             scale = [part for part in scale.split(",") if part]
         elif not isinstance(scale, list):
             # yaml that was valid yaml, but not a list of things
-            raise JujuConfigError(f"{ERROR} yaml or json format - expected a list")
+            raise ConfigError(f"{ERROR} yaml or json format - expected a list")
 
         try:
             self.scale = [self.parser(parts) for parts in scale]
-        except JujuConfigError:
+        except ConfigError:
             logger.error("invalid juju_scale configuration: %s", cfg)
             raise
