@@ -149,5 +149,11 @@ def test_juju_autoscaler_pebble_ready_after_config_minimal(
     contents = yaml.safe_load(Path(testdata, "models.yaml").read_text())
     assert yaml.safe_load(container.pull(f"{cli_path}/models.yaml").read()) == contents
 
+    cli_path = "/config"
+    files = container.list_files(cli_path)
+    assert [file.name for file in files] == ["cloud-config.yaml"]
+    contents = yaml.safe_load(Path(testdata, "cloud-config.yaml").read_text())
+    assert yaml.safe_load(container.pull(f"{cli_path}/cloud-config.yaml").read()) == contents
+
     lightkube_client.delete.assert_called()
     lightkube_client.create.assert_called()

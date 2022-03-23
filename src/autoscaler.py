@@ -3,20 +3,32 @@ from dataclasses import dataclass, field
 import logging
 from ops.pebble import ExecError
 from pathlib import Path
-from typing import Dict
+from typing import TypedDict
 import yaml
 
 from errors import JujuEnvironmentError
 
 logger = logging.getLogger(__name__)
 CONTROLLER = "scaler-controller"
+CLOUD_CONFIG_FILE = Path("/", "config", "cloud-config.yaml")
+
+
+ControllerData = TypedDict(
+    "ControllerData",
+    {"api-endpoints": list[str], "uuid": str, "ca-cert": str},
+)
+Secrets = TypedDict("Secrets", {"user": str, "password": str})
+ModelData = TypedDict("ModelData", {"models": dict, "current-model": str})
+CloudConfig = TypedDict(
+    "CloudConfig", {"Username": str, "Password": str, "Endpoint": list[str], "Cacert": str}
+)
 
 
 @dataclass
 class AutoScaler:
-    controller_data: Dict[str, str] = field(default_factory=dict)
-    model_data: Dict[str, str] = field(default_factory=dict)
-    secrets: Dict[str, str] = field(default_factory=dict)
+    controller_data: ControllerData = field(default_factory=ControllerData)
+    model_data: ModelData = field(default_factory=ModelData)
+    secrets: Secrets = field(default_factory=Secrets)
     command: str = ""
 
     def _build_command(self, config, charm):
@@ -27,7 +39,7 @@ class AutoScaler:
             raise JujuEnvironmentError("Waiting for Juju Configuration")
 
         namespace = f"--namespace {charm.model.name.strip()}"
-        provider = "--cloud-provider=juju"
+        provider = f"--cloud-provider=juju --cloud-config={CLOUD_CONFIG_FILE}"
         nodes = " ".join([f"--nodes {node}" for node in node_groups])
 
         extra_args = config["extra_args"].key_values
@@ -75,6 +87,7 @@ class AutoScaler:
         container.push(*self.accounts_file, make_dirs=True, **self.root_owned)
         container.push(*self.controller_file, make_dirs=True, **self.root_owned)
         container.push(*self.models_file, make_dirs=True, **self.root_owned)
+        container.push(*self.cloud_config_file, make_dirs=True, **self.root_owned)
         self._authorize_juju_cli(container)
 
     @staticmethod
@@ -148,3 +161,17 @@ class AutoScaler:
     @property
     def models_file(self):
         return "/root/.local/share/juju/models.yaml", yaml.safe_dump(self.models)
+
+    @property
+    def cloud_config(self) -> CloudConfig:
+        return {
+            "Username": self.secrets["user"],
+            "Password": self.secrets["password"],
+            "Cacert": self.controller_data["ca-cert"],
+            # until HA controller support is available
+            "Endpoint": self.controller_data["api-endpoints"],
+        }
+
+    @property
+    def cloud_config_file(self) -> tuple[str, str]:
+        return str(CLOUD_CONFIG_FILE), yaml.safe_dump(self.cloud_config)
