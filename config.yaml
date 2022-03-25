@@ -72,7 +72,7 @@ options:
       yaml or json mapping of string to use as an extra set arguments provided to cluster-autoscaler service.
       if an argument can be specified multiple times, for that key specify a list of values 
       
-      https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#what-are-the-parameters-to-ca
+      https://github.com/charmed-kubernetes/autoscaler/tree/juju/cluster-autoscaler/FAQ.md#what-are-the-parameters-to-ca
       
       example
         cat << EOF > args.yaml
