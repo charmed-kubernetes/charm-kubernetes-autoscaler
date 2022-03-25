@@ -37,7 +37,7 @@ options:
   juju_scale:
     type: string
     default: ""
-    description: |
+    description: |-
       yaml or json list associated with the autoscaler node-groups define parameters about 
       the node-group. Each item in the node-group list can be defined as the following yaml
       or json structure with the necessary components:
@@ -50,8 +50,12 @@ options:
                                      # to the value within `juju_default_model_uuid`.
                                      # if unspecified, this node-group will simply be ignored
 
+      The following example shows how to create juju-scale config on the shell for two applications
+      which have different scale requirements and differenet models. The first application 
+      defines an explicit model, the second application uses the juju_default_model_uuid
+      
       example
-        cat << EOF > scale.yaml
+        cat << EOF > juju_scale.yaml
         ---
         -                                                                    # explicit model
           application: kubernetes-worker-amd64
@@ -59,10 +63,8 @@ options:
           min: 3
           model: cdcaed9f-336d-47d3-83ba-d9ea9047b18c                        
         - {"min": 0, "max": 3, "application": "kubernetes-worker-amd64"}     # default model
-        - "0:3:kubernetes-worker-gpu"                                        # default model
-        - "0:3:cdcaed9f-336d-47d3-83ba-d9ea9047b18c:kubernetes-worker-s390x" # explicit model
         EOF
-        juju config kubernetes-autoscaler juju_scale="$(cat scale.yaml)"
+        juju config kubernetes-autoscaler juju_scale="$(cat juju_scale.yaml)"
   autoscaler_extra_args:
     type: string
     default: "{}"
