@@ -16,7 +16,7 @@ async def test_build_and_deploy(ops_test):
         "juju_default_model_uuid": connection.uuid,
         "juju_username": connection.username,
         "juju_password": connection.password,
-        "juju_scale": "0:2:scale-app",
+        "juju_scale": "- {min: 0, max: 2, application: scale-app}",
     }
 
     log.info("Build Charm...")
