@@ -1,4 +1,4 @@
-Cacert: |-
+ca-cert: |-
   -----BEGIN CERTIFICATE-----
   MIIC1TCCAb2gAwIBAgIJAO1yn8PO9NmAMA0GCSqGSIb3DQEBBQUAMBoxGDAWBgNV
   BAMTD3d3dy5leGFtcGxlLmNvbTAeFw0yMjAyMjMxOTM0MzlaFw0zMjAyMjExOTM0
@@ -17,7 +17,7 @@ Cacert: |-
   IvaKgqLSrMyfdcL3caau+1SFsbr6zIpjJcStkPrb8Z3pP9oou+GKZ8TTVJ19dvaO
   aC1lXuqxLnKN
   -----END CERTIFICATE-----
-Endpoint:
+endpoints:
   - '1.2.3.4:17070'
-Password: secret
-Username: alice
+password: secret
+user: alice

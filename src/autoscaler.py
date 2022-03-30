@@ -20,7 +20,7 @@ ControllerData = TypedDict(
 Secrets = TypedDict("Secrets", {"user": str, "password": str})
 ModelData = TypedDict("ModelData", {"models": dict, "current-model": str})
 CloudConfig = TypedDict(
-    "CloudConfig", {"Username": str, "Password": str, "Endpoint": list[str], "Cacert": str}
+    "CloudConfig", {"endpoints": list[str], "ca-cert": str, "user": str, "password": str}
 )
 
 
@@ -165,11 +165,10 @@ class AutoScaler:
     @property
     def cloud_config(self) -> CloudConfig:
         return {
-            "Username": self.secrets["user"],
-            "Password": self.secrets["password"],
-            "Cacert": self.controller_data["ca-cert"],
-            # until HA controller support is available
-            "Endpoint": self.controller_data["api-endpoints"],
+            "ca-cert": self.controller_data["ca-cert"],
+            "endpoints": self.controller_data["api-endpoints"],
+            "user": self.secrets["user"],
+            "password": self.secrets["password"],
         }
 
     @property
