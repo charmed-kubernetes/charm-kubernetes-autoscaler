@@ -1,5 +1,6 @@
 import logging
 import pytest
+import pytest_asyncio
 import random
 import string
 from pathlib import Path
@@ -14,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-@pytest.mark.asyncio
+@pytest_asyncio.fixture
 async def kubernetes(ops_test):
     kubeconfig_path = ops_test.tmp_path / "kubeconfig"
     retcode, stdout, stderr = await ops_test.run(
