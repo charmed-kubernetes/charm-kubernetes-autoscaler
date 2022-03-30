@@ -3,7 +3,13 @@ from dataclasses import dataclass, field
 import logging
 from ops.pebble import ExecError
 from pathlib import Path
-from typing import TypedDict
+import sys
+
+if sys.version_info >= (3, 8):
+    from typing import TypedDict, List, Tuple
+else:
+    from typing_extensions import TypedDict
+    from typing import List, Tuple
 import yaml
 
 from errors import JujuEnvironmentError
@@ -15,12 +21,12 @@ CLOUD_CONFIG_FILE = Path("/", "config", "cloud-config.yaml")
 
 ControllerData = TypedDict(
     "ControllerData",
-    {"api-endpoints": list[str], "uuid": str, "ca-cert": str},
+    {"api-endpoints": List[str], "uuid": str, "ca-cert": str},
 )
 Secrets = TypedDict("Secrets", {"user": str, "password": str})
 ModelData = TypedDict("ModelData", {"models": dict, "current-model": str})
 CloudConfig = TypedDict(
-    "CloudConfig", {"endpoints": list[str], "ca-cert": str, "user": str, "password": str}
+    "CloudConfig", {"endpoints": List[str], "ca-cert": str, "user": str, "password": str}
 )
 
 
@@ -172,5 +178,5 @@ class AutoScaler:
         }
 
     @property
-    def cloud_config_file(self) -> tuple[str, str]:
+    def cloud_config_file(self) -> Tuple[str, str]:
         return str(CLOUD_CONFIG_FILE), yaml.safe_dump(self.cloud_config)
