@@ -127,11 +127,11 @@ def test_juju_autoscaler_pebble_ready_after_config_minimal(
     text = Path(testdata, "layer.yaml").read_text()
     assert plan.to_dict() == yaml.safe_load(text)
 
-    cli_path = "/config"
-    files = container.list_files(cli_path)
+    config_path = "/config"
+    files = container.list_files(config_path)
     assert [file.name for file in files] == ["cloud-config.yaml"]
     contents = yaml.safe_load(Path(testdata, "cloud-config.yaml").read_text())
-    assert yaml.safe_load(container.pull(f"{cli_path}/cloud-config.yaml").read()) == contents
+    assert yaml.safe_load(container.pull(f"{config_path}/cloud-config.yaml").read()) == contents
 
     lightkube_client.delete.assert_called()
     lightkube_client.create.assert_called()
