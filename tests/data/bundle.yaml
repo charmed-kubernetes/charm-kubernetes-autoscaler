@@ -7,7 +7,7 @@ applications:
     trust: true
     scale: 1
     resources:
-      juju-autoscaler-image: rocks.canonical.com/cdk/cluster-autoscaler-juju:dev-2.9.22-build4
+      juju-autoscaler-image: {{juju_autoscaler_image}}
   scale-app:
     charm: hello-kubecon
     scale: 1

@@ -1,7 +1,9 @@
 import base64
 import logging
 import shlex
+from pathlib import Path
 import pytest
+import yaml
 
 log = logging.getLogger(__name__)
 
@@ -19,11 +21,16 @@ async def test_build_and_deploy(ops_test):
         "juju_scale": "- {min: 0, max: 2, application: scale-app}",
     }
 
+    metadata = yaml.safe_load(Path("metadata.yaml").read_text())
+    image = metadata["resources"]["juju-autoscaler-image"]["upstream-source"]
+
     log.info("Build Charm...")
     charm = await ops_test.build_charm(".")
 
     log.info("Render Bundle...")
-    bundle = ops_test.render_bundle("tests/data/bundle.yaml", charm=charm, juju_args=juju_args)
+    bundle = ops_test.render_bundle(
+        "tests/data/bundle.yaml", charm=charm, juju_args=juju_args, juju_autoscaler_image=image
+    )
 
     log.info("Deploy Charm...")
     model = ops_test.model_full_name
