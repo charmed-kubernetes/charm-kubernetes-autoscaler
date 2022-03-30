@@ -14,8 +14,7 @@ from lightkube.models.meta_v1 import ObjectMeta
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="module")
 async def kubernetes(ops_test):
     kubeconfig_path = ops_test.tmp_path / "kubeconfig"
     retcode, stdout, stderr = await ops_test.run(

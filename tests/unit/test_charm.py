@@ -127,28 +127,6 @@ def test_juju_autoscaler_pebble_ready_after_config_minimal(
     text = Path(testdata, "layer.yaml").read_text()
     assert plan.to_dict() == yaml.safe_load(text)
 
-    cli_path = "/root/.local/share/juju"
-    files = container.list_files(cli_path)
-    assert [file.name for file in files] == ["accounts.yaml", "controllers.yaml", "models.yaml"]
-
-    config_file = next(file for file in files if file.name == "accounts.yaml")
-    assert (config_file.user_id, config_file.group_id) == (0, 0)
-
-    contents = yaml.safe_load(Path(testdata, "accounts.yaml").read_text())
-    assert yaml.safe_load(container.pull(f"{cli_path}/accounts.yaml").read()) == contents
-
-    controller_file = next(file for file in files if file.name == "controllers.yaml")
-    assert (controller_file.user_id, controller_file.group_id) == (0, 0)
-
-    contents = yaml.safe_load(Path(testdata, "controllers.yaml").read_text())
-    assert yaml.safe_load(container.pull(f"{cli_path}/controllers.yaml").read()) == contents
-
-    models_file = next(file for file in files if file.name == "models.yaml")
-    assert (models_file.user_id, models_file.group_id) == (0, 0)
-
-    contents = yaml.safe_load(Path(testdata, "models.yaml").read_text())
-    assert yaml.safe_load(container.pull(f"{cli_path}/models.yaml").read()) == contents
-
     cli_path = "/config"
     files = container.list_files(cli_path)
     assert [file.name for file in files] == ["cloud-config.yaml"]
