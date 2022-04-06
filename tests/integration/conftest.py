@@ -33,7 +33,7 @@ async def charmed_kubernetes(ops_test):
 
         if deploy:
             await model.deploy("kubernetes-core", channel="latest/edge")
-        await model.wait_for_idle(wait_for_active=True)
+        await model.wait_for_idle(wait_for_active=True, timeout=60 * 60)
         kubeconfig_path = ops_test.tmp_path / "kubeconfig"
         retcode, stdout, stderr = await ops_test.run(
             "juju",
