@@ -60,13 +60,22 @@ async def k8s_cloud(charmed_kubernetes, ops_test):
         return
 
     with ops_test.model_context("main"):
-        os.environ['KUBECONFIG'] = str(charmed_kubernetes.kubeconfig)
-        await ops_test.juju("add-k8s", cloud_name, "--skip-storage", "--controller", ops_test.controller_name, "--client")
+        os.environ["KUBECONFIG"] = str(charmed_kubernetes.kubeconfig)
+        await ops_test.juju(
+            "add-k8s",
+            cloud_name,
+            "--skip-storage",
+            "--controller",
+            ops_test.controller_name,
+            "--client",
+        )
     yield cloud_name
 
     with ops_test.model_context("main"):
         if not ops_test.keep_model:
-            await ops_test.juju("remove-cloud", cloud_name, "--controller", ops_test.controller_name, "--client")
+            await ops_test.juju(
+                "remove-cloud", cloud_name, "--controller", ops_test.controller_name, "--client"
+            )
 
 
 @pytest_asyncio.fixture(scope="module")
@@ -79,10 +88,7 @@ async def k8s_model(k8s_cloud, ops_test):
 
 @pytest_asyncio.fixture(scope="module")
 async def kubernetes(charmed_kubernetes, request):
-    namespace = (
-        request.node.name + "-"
-        + random.choice(string.ascii_lowercase + string.digits) * 5
-    )
+    namespace = request.node.name + "-" + random.choice(string.ascii_lowercase + string.digits) * 5
     config = KubeConfig.from_file(charmed_kubernetes.kubeconfig)
     client = Client(
         config=config.get(context_name="juju-context"),
