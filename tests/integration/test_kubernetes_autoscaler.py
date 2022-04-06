@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test):
+async def test_build_and_deploy(ops_test, k8s_model):
     connection = ops_test.model.connection()
     cacert = base64.b64encode(connection.cacert.encode("ascii")).decode("ascii")
     juju_args = {
@@ -24,26 +24,26 @@ async def test_build_and_deploy(ops_test):
     metadata = yaml.safe_load(Path("metadata.yaml").read_text())
     image = metadata["resources"]["juju-autoscaler-image"]["upstream-source"]
 
-    log.info("Build Charm...")
-    charm = await ops_test.build_charm(".")
+    with ops_test.model_context(k8s_model):
+        log.info("Build Charm...")
+        charm = await ops_test.build_charm(".")
 
-    log.info("Render Bundle...")
-    bundle = ops_test.render_bundle(
-        "tests/data/bundle.yaml", charm=charm, juju_args=juju_args, juju_autoscaler_image=image
-    )
+        log.info("Render Bundle...")
+        bundle = ops_test.render_bundle(
+            "tests/data/bundle.yaml", charm=charm, juju_args=juju_args, juju_autoscaler_image=image
+        )
 
-    log.info("Deploy Charm...")
-    model = ops_test.model_full_name
-    cmd = f"juju deploy -m {model} {bundle} --trust"
-    rc, stdout, stderr = await ops_test.run(*shlex.split(cmd))
-    assert rc == 0, f"Bundle deploy failed: {(stderr or stdout).strip()}"
+        log.info("Deploy Charm...")
+        cmd = f"juju deploy {bundle} --trust"
+        rc, stdout, stderr = await ops_test.run(*shlex.split(cmd))
+        assert rc == 0, f"Bundle deploy failed: {(stderr or stdout).strip()}"
 
-    log.info(stdout)
-    await ops_test.model.block_until(
-        lambda: "kubernetes-autoscaler" in ops_test.model.applications, timeout=60
-    )
+        log.info(stdout)
+        await ops_test.model.block_until(
+            lambda: "kubernetes-autoscaler" in ops_test.model.applications, timeout=60
+        )
 
-    await ops_test.model.wait_for_idle(wait_for_active=True)
+        await ops_test.model.wait_for_idle(wait_for_active=True)
 
 
 async def test_status(units):

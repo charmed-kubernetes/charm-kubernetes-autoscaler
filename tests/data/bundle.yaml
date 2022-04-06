@@ -1,56 +1,6 @@
-description: A minimal two-machine Kubernetes cluster, appropriate for development.
-series: focal
-machines:
-  '0':
-    constraints: cores=2 mem=4G root-disk=16G
-    series: focal
-  '1':
-    constraints: cores=4 mem=4G root-disk=16G
-    series: focal
+bundle: kubernetes
+description: Bundle to deploy for integration tests
 applications:
-  containerd:
-    charm: containerd
-    channel: edge
-  easyrsa:
-    charm: easyrsa
-    channel: edge
-    num_units: 1
-    to:
-    - '0'
-  etcd:
-    charm: etcd
-    channel: edge
-    num_units: 1
-    options:
-      channel: 3.4/stable
-    to:
-    - '0'
-  calico:
-    charm: calico
-    options:
-      ignore-loose-rpf: true
-      vxlan: Always
-      channel: 1.23/edge
-  kubernetes-control-plane:
-    charm: kubernetes-control-plane
-    channel: latest/edge
-    constraints: cores=2 mem=4G root-disk=16G
-    expose: true
-    num_units: 1
-    options:
-      channel: 1.23/edge
-    to:
-    - '0'
-  kubernetes-worker:
-    charm: kubernetes-worker
-    channel: edge
-    constraints: cores=4 mem=4G root-disk=16G
-    expose: true
-    num_units: 1
-    options:
-      channel: 1.23/edge
-    to:
-    - '1'
   kubernetes-autoscaler:
     charm: {{charm}}
     options: {{juju_args}}
@@ -58,24 +8,4 @@ applications:
     scale: 1
     resources:
       juju-autoscaler-image: {{juju_autoscaler_image}}
-relations:
-- - kubernetes-control-plane:kube-control
-  - kubernetes-worker:kube-control
-- - kubernetes-control-plane:certificates
-  - easyrsa:client
-- - kubernetes-control-plane:etcd
-  - etcd:db
-- - kubernetes-worker:certificates
-  - easyrsa:client
-- - etcd:certificates
-  - easyrsa:client
-- - calico:etcd
-  - etcd:db
-- - calico:cni
-  - kubernetes-control-plane:cni
-- - calico:cni
-  - kubernetes-worker:cni
-- - containerd:containerd
-  - kubernetes-worker:container-runtime
-- - containerd:containerd
-  - kubernetes-control-plane:container-runtime
+relations: []
