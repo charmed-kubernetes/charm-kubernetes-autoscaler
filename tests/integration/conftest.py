@@ -1,4 +1,6 @@
 import logging
+import os
+
 import pytest
 import pytest_asyncio
 import random
@@ -60,31 +62,29 @@ async def k8s_cloud(charmed_kubernetes, ops_test):
         return
 
     with ops_test.model_context("main"):
-        creds = f"KUBECONFIG={charmed_kubernetes.kubeconfig}"
+        log.info(f"Adding cloud '{cloud_name}'...")
+        os.environ["KUBECONFIG"] = str(charmed_kubernetes.kubeconfig)
         await ops_test.run(
-            creds,
             "juju",
             "add-k8s",
             cloud_name,
             "--skip-storage",
             f"--controller={ops_test.controller_name}",
             "--client",
+            check=True,
         )
     yield cloud_name
 
     with ops_test.model_context("main"):
-        if not ops_test.keep_model:
-            await ops_test.juju(
-                "remove-cloud", cloud_name, "--controller", ops_test.controller_name, "--client"
-            )
-
-
-@pytest_asyncio.fixture(scope="module")
-async def k8s_model(k8s_cloud, ops_test):
-    model_alias = "k8s-model"
-    await ops_test.add_model(model_alias, cloud_name=k8s_cloud)
-    yield model_alias
-    await ops_test.remove_model(model_alias)
+        log.info(f"Removing cloud '{cloud_name}'...")
+        await ops_test.juju(
+            "remove-cloud",
+            cloud_name,
+            "--controller",
+            ops_test.controller_name,
+            "--client",
+            check=True,
+        )
 
 
 @pytest_asyncio.fixture(scope="module")
@@ -102,6 +102,14 @@ async def kubernetes(charmed_kubernetes, request):
     client.delete(Namespace, namespace)
 
 
+@pytest_asyncio.fixture(scope="module")
+async def k8s_model(k8s_cloud, ops_test):
+    model_alias = "k8s-model"
+    model = await ops_test.add_model(model_alias, cloud_name=k8s_cloud)
+    yield model, model_alias
+    await ops_test.remove_model(model_alias, timeout=5 * 60)
+
+
 @pytest.fixture
 def metadata():
     metadata = Path("./metadata.yaml")
@@ -110,20 +118,12 @@ def metadata():
 
 
 @pytest.fixture
-def model(k8s_model, ops_test):
-    with ops_test.model_context(k8s_model) as model:
-        pass
-    return model
-
-
-@pytest.fixture
-def application(model, metadata):
+def application(k8s_model, metadata):
+    model, alias = k8s_model
     charm_name = metadata["name"]
-    app = model.applications[charm_name]
-    return app
+    return model.applications[charm_name]
 
 
 @pytest.fixture
 def units(application):
-    units = application.units
-    return units
+    return application.units

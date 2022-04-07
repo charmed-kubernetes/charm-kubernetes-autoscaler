@@ -10,6 +10,7 @@ log = logging.getLogger(__name__)
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test, k8s_model):
+    _, k8s_alias = k8s_model
     connection = ops_test.model.connection()
     cacert = base64.b64encode(connection.cacert.encode("ascii")).decode("ascii")
     juju_args = {
@@ -24,7 +25,7 @@ async def test_build_and_deploy(ops_test, k8s_model):
     metadata = yaml.safe_load(Path("metadata.yaml").read_text())
     image = metadata["resources"]["juju-autoscaler-image"]["upstream-source"]
 
-    with ops_test.model_context(k8s_model):
+    with ops_test.model_context(k8s_alias) as k8s_model:
         log.info("Build Charm...")
         charm = await ops_test.build_charm(".")
 
@@ -39,11 +40,11 @@ async def test_build_and_deploy(ops_test, k8s_model):
         assert rc == 0, f"Bundle deploy failed: {(stderr or stdout).strip()}"
 
         log.info(stdout)
-        await ops_test.model.block_until(
-            lambda: "kubernetes-autoscaler" in ops_test.model.applications, timeout=60
+        await k8s_model.block_until(
+            lambda: "kubernetes-autoscaler" in k8s_model.applications, timeout=60
         )
 
-        await ops_test.model.wait_for_idle(wait_for_active=True)
+        await k8s_model.wait_for_idle(wait_for_active=True)
 
 
 async def test_status(units):
