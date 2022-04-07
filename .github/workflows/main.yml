@@ -60,8 +60,9 @@ jobs:
       - name: Collect Juju Status
         if: ${{ failure() }}
         run: |
-          sudo juju status 2>&1 | tee tmp/juju-status.txt
-          sudo mv juju-crashdump-* tmp/
+          juju status 2>&1 | tee tmp/juju-status.txt
+          juju-crashdump -s -m controller -a debug-layer -a config -o tmp/
+          mv juju-crashdump-* tmp/
       - name: Upload debug artifacts
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2
