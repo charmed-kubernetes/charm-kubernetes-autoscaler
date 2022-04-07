@@ -1,7 +1,6 @@
 import logging
 import pytest
 import pytest_asyncio
-import os
 import random
 import string
 from pathlib import Path
@@ -38,7 +37,7 @@ async def charmed_kubernetes(ops_test):
         retcode, stdout, stderr = await ops_test.run(
             "juju",
             "scp",
-            f"{control_plane_app}/leader:.kube/config",
+            f"{control_plane_app}/leader:/home/ubuntu/config",
             kubeconfig_path,
         )
         if retcode != 0:
@@ -46,6 +45,7 @@ async def charmed_kubernetes(ops_test):
             log.error(f"stdout:\n{stdout.strip()}")
             log.error(f"stderr:\n{stderr.strip()}")
             pytest.fail("Failed to copy kubeconfig from kubernetes-control-plane")
+        assert Path(kubeconfig_path).stat().st_size, "kubeconfig file is 0 bytes"
     yield SimpleNamespace(kubeconfig=kubeconfig_path, model=model)
 
 
@@ -60,13 +60,14 @@ async def k8s_cloud(charmed_kubernetes, ops_test):
         return
 
     with ops_test.model_context("main"):
-        os.environ["KUBECONFIG"] = str(charmed_kubernetes.kubeconfig)
-        await ops_test.juju(
+        creds = f"KUBECONFIG={charmed_kubernetes.kubeconfig}"
+        await ops_test.run(
+            creds,
+            "juju",
             "add-k8s",
             cloud_name,
             "--skip-storage",
-            "--controller",
-            ops_test.controller_name,
+            f"--controller={ops_test.controller_name}",
             "--client",
         )
     yield cloud_name
@@ -80,7 +81,7 @@ async def k8s_cloud(charmed_kubernetes, ops_test):
 
 @pytest_asyncio.fixture(scope="module")
 async def k8s_model(k8s_cloud, ops_test):
-    model_alias = "k8s-cloud"
+    model_alias = "k8s-model"
     await ops_test.add_model(model_alias, cloud_name=k8s_cloud)
     yield model_alias
     await ops_test.remove_model(model_alias)

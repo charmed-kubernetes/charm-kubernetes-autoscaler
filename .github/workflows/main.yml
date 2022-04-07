@@ -28,9 +28,7 @@ jobs:
       with:
         python-version: ${{ matrix.python }}
     - name: Install Dependencies
-      run: |
-        pip install tox
-        sudo snap install charm --classic
+      run: pip install tox
     - name: Lint
       run: tox -vve lint
     - name: Unit Tests
@@ -56,5 +54,17 @@ jobs:
           bootstrap-options: "--model-default datastore=vsanDatastore --model-default primary-network=VLAN_2764"
       - name: Run test
         run: tox -e integration
-
-
+      - name: Setup Debug Artifact Collection
+        if: ${{ failure() }}
+        run: mkdir tmp
+      - name: Collect Juju Status
+        if: ${{ failure() }}
+        run: |
+          sudo juju status 2>&1 | tee tmp/juju-status.txt
+          sudo mv juju-crashdump-* tmp/
+      - name: Upload debug artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-run-artifacts
+          path: tmp
