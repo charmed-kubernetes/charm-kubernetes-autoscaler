@@ -63,15 +63,16 @@ async def k8s_cloud(charmed_kubernetes, ops_test):
 
     with ops_test.model_context("main"):
         log.info(f"Adding cloud '{cloud_name}'...")
-        os.environ["KUBECONFIG"] = str(charmed_kubernetes.kubeconfig)
-        await ops_test.run(
-            "juju",
+        kubeconfig = charmed_kubernetes.kubeconfig.read_bytes()
+        await ops_test.juju(
             "add-k8s",
             cloud_name,
             "--skip-storage",
             f"--controller={ops_test.controller_name}",
             "--client",
             check=True,
+            stdin=kubeconfig,
+            fail_msg=f"Failed to add-k8s {cloud_name}"
         )
     yield cloud_name
 
