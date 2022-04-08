@@ -60,7 +60,7 @@ async def charmed_kubernetes(ops_test):
     yield SimpleNamespace(kubeconfig=kubeconfig_path, model=model)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def module_name(request):
     return request.module.__name__.replace("_", "-")
 
@@ -154,10 +154,10 @@ def worker_units(charmed_kubernetes):
 
 @pytest.fixture
 def deployment(kubernetes):
-    with open("nginx_deployment.yaml") as f:
+    with Path("tests/data/nginx_deployment.yaml").open() as f:
         for obj in codecs.load_all_yaml(f):
             # Server side apply requires an explicit namespace be passed in
-            kubernetes.apply(obj, namespace=kubernetes.namespace)
+            kubernetes.create(obj, namespace=kubernetes.namespace)
     yield
     for obj in codecs.load_all_yaml(f):
         kubernetes.delete(obj, obj.metadata.name, namespace=kubernetes.namespace)
