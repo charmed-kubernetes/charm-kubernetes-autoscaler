@@ -4,7 +4,6 @@ import shlex
 from pathlib import Path
 import pytest
 import yaml
-from tenacity import retry, wait_exponential, stop_after_delay, before_log
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ async def test_build_and_deploy(ops_test, k8s_model):
         "juju_default_model_uuid": connection.uuid,
         "juju_username": connection.username,
         "juju_password": connection.password,
-        "juju_scale": "- {min: 1, max: 3, application: kubernetes-worker}",
+        "juju_scale": "- {min: 1, max: 2, application: kubernetes-worker}",
     }
 
     metadata = yaml.safe_load(Path("metadata.yaml").read_text())
@@ -53,21 +52,12 @@ async def test_status(units):
     assert units[0].workload_status_message == ""
 
 
-@retry(
-    wait=wait_exponential(multiplier=1, min=1, max=30),
-    stop=stop_after_delay(60 * 10),
-    reraise=True,
-    before=before_log(log, logging.INFO),
-)
-async def test_scale_up(scaled_up_deployment, worker_units):
-    assert len(worker_units) == 2
+async def test_scale_up(scaled_up_deployment, ops_test):
+    await ops_test.model.wait_for_idle(wait_for_active=True, timeout=15 * 60)
+    assert len(ops_test.model.applications["kubernetes-worker"].units) == 2
 
 
-@retry(
-    wait=wait_exponential(multiplier=1, min=1, max=30),
-    stop=stop_after_delay(60 * 10),
-    reraise=True,
-    before=before_log(log, logging.INFO),
-)
-async def test_scale_down(scaled_down_deployment, worker_units):
-    assert len(worker_units) == 1
+async def test_scale_down(scaled_down_deployment, ops_test):
+    def conditions():
+        return len(ops_test.model.applications["kubernetes-worker"].units) == 1
+    await ops_test.model.block_until(conditions, timeout=15 * 60)

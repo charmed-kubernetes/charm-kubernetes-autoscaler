@@ -152,14 +152,14 @@ def worker_units(charmed_kubernetes):
     return charmed_kubernetes.model.applications["kubernetes-worker"].units
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def deployment(kubernetes):
-    with Path("tests/data/nginx_deployment.yaml").open() as f:
-        for obj in codecs.load_all_yaml(f):
-            # Server side apply requires an explicit namespace be passed in
-            kubernetes.create(obj, namespace=kubernetes.namespace)
-    yield
-    for obj in codecs.load_all_yaml(f):
+    path_to_deployment = Path("tests/data/nginx_deployment.yaml")
+    with path_to_deployment.open() as f:
+        spec = yaml.safe_load(f)
+        obj = codecs.from_dict(spec)
+        kubernetes.create(obj, namespace=kubernetes.namespace)
+        yield
         kubernetes.delete(obj, obj.metadata.name, namespace=kubernetes.namespace)
 
 
