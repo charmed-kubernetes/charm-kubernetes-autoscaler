@@ -53,7 +53,7 @@ jobs:
           clouds-yaml: ${{ secrets.CLOUDS_YAML }}
           bootstrap-options: "--model-default datastore=vsanDatastore --model-default primary-network=VLAN_2764"
       - name: Run test
-        run: tox -e integration
+        run: tox -e integration -- --destructive-mode
       - name: Setup Debug Artifact Collection
         if: ${{ failure() }}
         run: mkdir tmp
