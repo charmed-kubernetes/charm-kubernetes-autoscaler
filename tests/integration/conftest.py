@@ -149,32 +149,33 @@ def units(application):
 def worker_units(charmed_kubernetes):
     return charmed_kubernetes.model.applications["kubernetes-worker"].units
 
+
 @pytest.fixture
 def deployment(kubernetes):
-    namespace = kubernetes.namespace
-    with open('nginx_deployment.yaml') as f:
+    with open("nginx_deployment.yaml") as f:
         for obj in codecs.load_all_yaml(f):
             # Server side apply requires an explicit namespace be passed in
-            kubernetes.apply(obj, namespace=kubernetes.namepspace)
+            kubernetes.apply(obj, namespace=kubernetes.namespace)
     yield
     for obj in codecs.load_all_yaml(f):
-        kubernetes.delete(obj, obj.metadata.name, namespace=kubernetes.namepspace)
+        kubernetes.delete(obj, obj.metadata.name, namespace=kubernetes.namespace)
 
 
 @pytest.fixture
 def scaled_up_deployment(kubernetes, deployment):
     dep_obj = Deployment.Scale(
-        metadata=ObjectMeta(name='nginx', namespace=kubernetes.namespace),
-        spec=ScaleSpec(replicas=200)
+        metadata=ObjectMeta(name="nginx", namespace=kubernetes.namespace),
+        spec=ScaleSpec(replicas=200),
     )
     log.info("Scaling nginx deployment up to 200 units...")
     kubernetes.replace(dep_obj, "nginx", namespace=kubernetes.namespace)
 
+
 @pytest.fixture
 def scaled_down_deployment(kubernetes, deployment):
     dep_obj = Deployment.Scale(
-        metadata=ObjectMeta(name='nginx', namespace=kubernetes.namespace),
-        spec=ScaleSpec(replicas=0)
+        metadata=ObjectMeta(name="nginx", namespace=kubernetes.namespace),
+        spec=ScaleSpec(replicas=0),
     )
     log.info("Scaling nginx deployment down to 0 units...")
     kubernetes.replace(dep_obj, "nginx", namespace=kubernetes.namespace)
