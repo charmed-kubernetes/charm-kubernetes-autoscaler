@@ -71,7 +71,7 @@ async def k8s_cloud(charmed_kubernetes, ops_test):
             "--client",
             check=True,
             stdin=kubeconfig,
-            fail_msg=f"Failed to add-k8s {cloud_name}"
+            fail_msg=f"Failed to add-k8s {cloud_name}",
         )
     yield cloud_name
 
