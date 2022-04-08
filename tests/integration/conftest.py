@@ -60,12 +60,15 @@ async def charmed_kubernetes(ops_test):
     yield SimpleNamespace(kubeconfig=kubeconfig_path, model=model)
 
 
+@pytest.fixture
+def module_name(request):
+    return request.module.__name__.replace("_", "-")
+
+
 @pytest_asyncio.fixture(scope="module")
-async def k8s_cloud(charmed_kubernetes, ops_test, request):
+async def k8s_cloud(charmed_kubernetes, ops_test, request, module_name):
     """Use an existing k8s-cloud or create a k8s-cloud for deploying a new k8s model into"""
-    cloud_name = (
-        request.config.option.k8s_cloud or f"{request.module.__name__.replace('_', '-')}-k8s-cloud"
-    )
+    cloud_name = request.config.option.k8s_cloud or f"{module_name}-k8s-cloud"
     controller = await ops_test.model.get_controller()
     current_clouds = await controller.clouds()
     if f"cloud-{cloud_name}" in current_clouds.clouds:
@@ -100,10 +103,9 @@ async def k8s_cloud(charmed_kubernetes, ops_test, request):
 
 
 @pytest_asyncio.fixture(scope="module")
-async def kubernetes(charmed_kubernetes, request):
-    namespace = (
-        request.module.__name__ + "-" + random.choice(string.ascii_lowercase + string.digits) * 5
-    )
+async def kubernetes(charmed_kubernetes, request, module_name):
+    rand_str = random.choice(string.ascii_lowercase + string.digits) * 5
+    namespace = f"{module_name}-{rand_str}"
     config = KubeConfig.from_file(charmed_kubernetes.kubeconfig)
     client = Client(
         config=config.get(context_name="juju-context"),
