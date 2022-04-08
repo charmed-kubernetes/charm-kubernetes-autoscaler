@@ -1,8 +1,8 @@
 import logging
-import os
 
 import pytest
 import pytest_asyncio
+from _pytest.config.argparsing import Parser
 import random
 import string
 from pathlib import Path
@@ -16,6 +16,14 @@ from lightkube.resources.apps_v1 import Deployment
 from lightkube.models.autoscaling_v1 import ScaleSpec
 
 log = logging.getLogger(__name__)
+
+
+def pytest_addoption(parser: Parser):
+    parser.addoption(
+        "--k8s-cloud",
+        action="store",
+        help="Juju kubernetes cloud to reuse; if not provided, will generate a new cloud",
+    )
 
 
 @pytest_asyncio.fixture(scope="module")
@@ -53,9 +61,11 @@ async def charmed_kubernetes(ops_test):
 
 
 @pytest_asyncio.fixture(scope="module")
-async def k8s_cloud(charmed_kubernetes, ops_test):
+async def k8s_cloud(charmed_kubernetes, ops_test, request):
     """Use an existing k8s-cloud or create a k8s-cloud for deploying a new k8s model into"""
-    cloud_name = "k8s-cloud"
+    cloud_name = (
+        request.config.option.k8s_cloud or f"{request.module.__name__.replace('_', '-')}-k8s-cloud"
+    )
     controller = await ops_test.model.get_controller()
     current_clouds = await controller.clouds()
     if f"cloud-{cloud_name}" in current_clouds.clouds:
@@ -64,15 +74,16 @@ async def k8s_cloud(charmed_kubernetes, ops_test):
 
     with ops_test.model_context("main"):
         log.info(f"Adding cloud '{cloud_name}'...")
-        os.environ["KUBECONFIG"] = str(charmed_kubernetes.kubeconfig)
-        await ops_test.run(
-            "juju",
+        kubeconfig = charmed_kubernetes.kubeconfig.read_bytes()
+        await ops_test.juju(
             "add-k8s",
             cloud_name,
             "--skip-storage",
             f"--controller={ops_test.controller_name}",
             "--client",
             check=True,
+            stdin=kubeconfig,
+            fail_msg=f"Failed to add-k8s {cloud_name}",
         )
     yield cloud_name
 
@@ -90,7 +101,9 @@ async def k8s_cloud(charmed_kubernetes, ops_test):
 
 @pytest_asyncio.fixture(scope="module")
 async def kubernetes(charmed_kubernetes, request):
-    namespace = request.node.name + "-" + random.choice(string.ascii_lowercase + string.digits) * 5
+    namespace = (
+        request.module.name + "-" + random.choice(string.ascii_lowercase + string.digits) * 5
+    )
     config = KubeConfig.from_file(charmed_kubernetes.kubeconfig)
     client = Client(
         config=config.get(context_name="juju-context"),
@@ -106,9 +119,11 @@ async def kubernetes(charmed_kubernetes, request):
 @pytest_asyncio.fixture(scope="module")
 async def k8s_model(k8s_cloud, ops_test):
     model_alias = "k8s-model"
-    model = await ops_test.add_model(model_alias, cloud_name=k8s_cloud)
+    model = await ops_test.track_model(
+        model_alias, cloud_name=k8s_cloud, credential_name=k8s_cloud
+    )
     yield model, model_alias
-    await ops_test.remove_model(model_alias, timeout=5 * 60)
+    await ops_test.forget_model(model_alias, timeout=5 * 60)
 
 
 @pytest.fixture
