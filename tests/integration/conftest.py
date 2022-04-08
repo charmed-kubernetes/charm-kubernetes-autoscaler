@@ -102,7 +102,7 @@ async def k8s_cloud(charmed_kubernetes, ops_test, request):
 @pytest_asyncio.fixture(scope="module")
 async def kubernetes(charmed_kubernetes, request):
     namespace = (
-        request.module.name + "-" + random.choice(string.ascii_lowercase + string.digits) * 5
+        request.module.__name__ + "-" + random.choice(string.ascii_lowercase + string.digits) * 5
     )
     config = KubeConfig.from_file(charmed_kubernetes.kubeconfig)
     client = Client(
