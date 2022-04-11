@@ -13,6 +13,7 @@ async def test_build_and_deploy(ops_test, k8s_model):
     _, k8s_alias = k8s_model
     connection = ops_test.model.connection()
     cacert = base64.b64encode(connection.cacert.encode("ascii")).decode("ascii")
+    xtra_args = "{v: 5, scale-down-delay-after-add: 3m0s, scale-down-unneeded-time: 3m0s}"
     juju_args = {
         "juju_api_endpoints": connection.endpoint,
         "juju_ca_cert": cacert,
@@ -20,6 +21,7 @@ async def test_build_and_deploy(ops_test, k8s_model):
         "juju_username": connection.username,
         "juju_password": connection.password,
         "juju_scale": "- {min: 1, max: 2, application: kubernetes-worker}",
+        "autoscaler_extra_args": xtra_args,
     }
 
     metadata = yaml.safe_load(Path("metadata.yaml").read_text())
