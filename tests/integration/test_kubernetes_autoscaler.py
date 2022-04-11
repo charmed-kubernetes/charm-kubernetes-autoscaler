@@ -58,9 +58,13 @@ async def test_status(units):
 
 
 async def test_scale_up(scaled_up_deployment, ops_test):
+    def conditions():
+        return len(ops_test.model.applications["kubernetes-worker"].units) == 2
+
     log.info("Watching Workers Expand...")
+    assert len(ops_test.model.applications["kubernetes-worker"].units) == 1
+    await ops_test.model.block_until(conditions, timeout=15 * 60)
     await ops_test.model.wait_for_idle(wait_for_active=True, timeout=15 * 60)
-    assert len(ops_test.model.applications["kubernetes-worker"].units) == 2
 
 
 async def test_scale_down(scaled_down_deployment, ops_test):
@@ -68,4 +72,5 @@ async def test_scale_down(scaled_down_deployment, ops_test):
         return len(ops_test.model.applications["kubernetes-worker"].units) == 1
 
     log.info("Watching Workers Contract...")
+    assert len(ops_test.model.applications["kubernetes-worker"].units) == 2
     await ops_test.model.block_until(conditions, timeout=15 * 60)
