@@ -10,6 +10,9 @@ bases:
       channel: "20.04"
 parts:
   charm:
-    charm-python-packages: [setuptools]
+    build-packages:
+      - gcc
+    charm-python-packages:
+      - setuptools
     prime:
       - upstream/**
