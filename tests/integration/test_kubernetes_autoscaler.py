@@ -26,12 +26,17 @@ async def test_build_and_deploy(ops_test, k8s_model):
     image = metadata["resources"]["juju-autoscaler-image"]["upstream-source"]
 
     with ops_test.model_context(k8s_alias) as k8s_model:
-        log.info("Build Charm...")
-        charm = await ops_test.build_charm(".")
+        charm = next(Path(".").glob("kubernetes-autoscaler*.charm"), None)
+        if not charm:
+            log.info("Build Charm...")
+            charm = await ops_test.build_charm(".")
 
         log.info("Render Bundle...")
         bundle = ops_test.render_bundle(
-            "tests/data/bundle.yaml", charm=charm, juju_args=juju_args, juju_autoscaler_image=image
+            "tests/data/bundle.yaml",
+            charm=charm.resolve(),
+            juju_args=juju_args,
+            juju_autoscaler_image=image,
         )
 
         log.info("Deploy Charm...")
@@ -53,6 +58,7 @@ async def test_status(units):
 
 
 async def test_scale_up(scaled_up_deployment, ops_test):
+    log.info("Watching Workers Expand...")
     await ops_test.model.wait_for_idle(wait_for_active=True, timeout=15 * 60)
     assert len(ops_test.model.applications["kubernetes-worker"].units) == 2
 
@@ -61,4 +67,5 @@ async def test_scale_down(scaled_down_deployment, ops_test):
     def conditions():
         return len(ops_test.model.applications["kubernetes-worker"].units) == 1
 
+    log.info("Watching Workers Contract...")
     await ops_test.model.block_until(conditions, timeout=15 * 60)
