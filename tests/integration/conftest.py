@@ -160,7 +160,7 @@ def deployment(kubernetes):
         obj = codecs.from_dict(spec)
         kubernetes.create(obj, namespace=kubernetes.namespace)
         yield
-        kubernetes.delete(obj, obj.metadata.name, namespace=kubernetes.namespace)
+        kubernetes.delete(type(obj), obj.metadata.name, namespace=kubernetes.namespace)
 
 
 @pytest.fixture
