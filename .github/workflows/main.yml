@@ -89,13 +89,13 @@ jobs:
           credentials-yaml: ${{ secrets.CREDENTIALS_YAML }}
           clouds-yaml: ${{ secrets.CLOUDS_YAML }}
           bootstrap-constraints: "arch=amd64 cores=2 mem=4G"
-          bootstrap-options: "${{ secrets.FOCAL_BOOTSTRAP_OPTIONS }} ${{ secrets.PROXY_MODEL_DEFAULTS }} --model-default datastore=vsanDatastore --model-default primary-network=VLAN_2764 --config caas-image-repo=rocks.canonical.com/cdk/jujusolutions"
+          bootstrap-options: "${{ secrets.FOCAL_BOOTSTRAP_OPTIONS }} --model-default datastore=vsanDatastore --model-default primary-network=VLAN_2764 --config caas-image-repo=rocks.canonical.com/cdk/jujusolutions"
       - name: Download charm artifact
         uses: actions/download-artifact@v3
         with:
           name: kubernetes-autoscaler.charm
       - name: Run test
-        run: tox -e integration
+        run: tox -e integration -- --model-config=tests/data/proxy_config.yaml
       - name: Setup Debug Artifact Collection
         if: ${{ failure() }}
         run: mkdir tmp
