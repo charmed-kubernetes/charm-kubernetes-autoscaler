@@ -135,3 +135,12 @@ def test_juju_autoscaler_pebble_ready_after_config_minimal(
 
     lightkube_client.delete.assert_called()
     lightkube_client.create.assert_called()
+
+
+@patch("ops.model.Container.get_services", autospec=True)
+@patch("ops.model.Container.stop", autospec=True)
+def test_juju_autoscaler_stop(mock_getservices, mock_stop, harness):
+    container = harness.model.unit.get_container("juju-autoscaler")
+    mock_getservices.return_value = {"juju-autoscaler: []"}
+    harness.charm.on.stop.emit()
+    mock_stop.assert_called_once_with(container, "juju-autoscaler")

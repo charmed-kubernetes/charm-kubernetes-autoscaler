@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test, k8s_model):
+async def test_build_and_deploy_autoscaler_charm(ops_test, k8s_model):
     _, k8s_alias = k8s_model
     connection = ops_test.model.connection()
     cacert = base64.b64encode(connection.cacert.encode("ascii")).decode("ascii")
@@ -51,10 +51,10 @@ async def test_build_and_deploy(ops_test, k8s_model):
             lambda: "kubernetes-autoscaler" in k8s_model.applications, timeout=60
         )
 
-        await k8s_model.wait_for_idle(wait_for_active=True)
+        await k8s_model.wait_for_idle(status="active")
 
 
-async def test_status(units):
+async def test_status_autoscaler_charm(units):
     assert units[0].workload_status == "active"
     assert units[0].workload_status_message == ""
 
@@ -66,7 +66,7 @@ async def test_scale_up(scaled_up_deployment, ops_test):
     log.info("Watching Workers Expand...")
     assert len(ops_test.model.applications["kubernetes-worker"].units) == 1
     await ops_test.model.block_until(conditions, timeout=15 * 60)
-    await ops_test.model.wait_for_idle(wait_for_active=True, timeout=15 * 60)
+    await ops_test.model.wait_for_idle(status="active", timeout=15 * 60)
 
 
 async def test_scale_down(scaled_down_deployment, ops_test):
