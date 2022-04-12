@@ -104,7 +104,7 @@ jobs:
         run: |
           juju status 2>&1 | tee tmp/juju-status.txt
           juju-crashdump -s -m controller -a debug-layer -a config -o tmp/
-          mv juju-crashdump-* tmp/
+          mv juju-crashdump-* tmp/ | true
       - name: Upload debug artifacts
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2

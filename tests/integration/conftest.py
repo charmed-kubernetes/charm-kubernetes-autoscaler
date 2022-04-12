@@ -44,7 +44,7 @@ async def charmed_kubernetes(ops_test):
 
         if deploy:
             await model.deploy("kubernetes-core", channel="latest/edge")
-        await model.wait_for_idle(wait_for_active=True, timeout=60 * 60)
+        await model.wait_for_idle(status="active", timeout=60 * 60)
         kubeconfig_path = ops_test.tmp_path / "kubeconfig"
         retcode, stdout, stderr = await ops_test.run(
             "juju",
@@ -147,20 +147,15 @@ def units(application):
     return application.units
 
 
-@pytest.fixture
-def worker_units(charmed_kubernetes):
-    return charmed_kubernetes.model.applications["kubernetes-worker"].units
-
-
 @pytest.fixture(scope="module")
 def deployment(kubernetes):
     path_to_deployment = Path("tests/data/nginx_deployment.yaml")
     with path_to_deployment.open() as f:
         spec = yaml.safe_load(f)
         obj = codecs.from_dict(spec)
-        kubernetes.create(obj, namespace=kubernetes.namespace)
-        yield
-        kubernetes.delete(type(obj), obj.metadata.name, namespace=kubernetes.namespace)
+    kubernetes.create(obj, namespace=kubernetes.namespace)
+    yield
+    kubernetes.delete(type(obj), obj.metadata.name, namespace=kubernetes.namespace)
 
 
 @pytest.fixture
