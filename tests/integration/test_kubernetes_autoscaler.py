@@ -1,7 +1,9 @@
 import base64
+from datetime import datetime, timedelta
 import logging
 import shlex
 from pathlib import Path
+from typing import Optional
 import pytest
 import yaml
 
@@ -59,25 +61,38 @@ async def test_status_autoscaler_charm(units):
     assert units[0].workload_status_message == ""
 
 
-async def test_scale_up(scaled_up_deployment, ops_test):
-    def two_units():
-        unit_count = len(ops_test.model.applications["kubernetes-worker"].units)
-        log.info(f"Worker count: {unit_count}...")
-        return unit_count == 2
+async def wait_for_worker_count(model, expected_workers):
+    """
+    Blocks waiting for worker count within the model to reach the expected number.
 
+    checks every half a second if the model has the required number of worker units.
+    Logs a message every 30 seconds about the number of workers
+    """
+    last_log_time: Optional[datetime] = None
+    log_interval = timedelta(seconds=30)
+
+    def condition():
+        nonlocal last_log_time
+        unit_count = len(model.applications["kubernetes-worker"].units)
+        if last_log_time is None or (datetime.now() - last_log_time) > log_interval:
+            log.info(f"Worker count {unit_count} != {expected_workers}... ")
+            last_log_time = datetime.now()
+        elif unit_count == expected_workers:
+            log.info(f"Worker count reached {unit_count}")
+        return unit_count == expected_workers
+
+    await model.block_until(condition, timeout=15 * 60)
+
+
+async def test_scale_up(scaled_up_deployment, ops_test):
     log.info("Watching workers expand...")
     assert len(ops_test.model.applications["kubernetes-worker"].units) == 1
-    await ops_test.model.block_until(two_units, timeout=15 * 60)
+    await wait_for_worker_count(ops_test.model, 2)
     await ops_test.model.wait_for_idle(status="active", timeout=15 * 60)
 
 
 async def test_scale_down(scaled_down_deployment, ops_test):
-    def one_unit():
-        unit_count = len(ops_test.model.applications["kubernetes-worker"].units)
-        log.info(f"Worker count: {unit_count}...")
-        return unit_count == 1
-
     log.info("Watching workers contract...")
     assert len(ops_test.model.applications["kubernetes-worker"].units) == 2
-    await ops_test.model.block_until(one_unit, timeout=15 * 60)
+    await wait_for_worker_count(ops_test.model, 1)
     await ops_test.model.wait_for_idle(status="active", timeout=15 * 60)
