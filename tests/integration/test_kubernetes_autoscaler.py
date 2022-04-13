@@ -1,7 +1,6 @@
 import base64
 from datetime import datetime, timedelta
 import logging
-import shlex
 from pathlib import Path
 from typing import Optional
 import pytest
@@ -35,20 +34,13 @@ async def test_build_and_deploy_autoscaler_charm(ops_test, k8s_model):
             log.info("Build Charm...")
             charm = await ops_test.build_charm(".")
 
-        log.info("Render Bundle...")
-        bundle = ops_test.render_bundle(
-            "tests/data/bundle.yaml",
-            charm=charm.resolve(),
-            juju_args=juju_args,
-            juju_autoscaler_image=image,
+        await k8s_model.deploy(
+            entity_url=charm.resolve(),
+            trust=True,
+            config=juju_args,
+            resources={"juju-autoscaler-image": image},
         )
 
-        log.info("Deploy Charm...")
-        cmd = f"juju deploy {bundle} --trust"
-        rc, stdout, stderr = await ops_test.run(*shlex.split(cmd))
-        assert rc == 0, f"Bundle deploy failed: {(stderr or stdout).strip()}"
-
-        log.info(stdout)
         await k8s_model.block_until(
             lambda: "kubernetes-autoscaler" in k8s_model.applications, timeout=60
         )
