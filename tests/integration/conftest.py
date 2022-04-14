@@ -43,6 +43,10 @@ async def charmed_kubernetes(ops_test):
             deploy, control_plane_app = False, control_plane_apps[0]
 
         if deploy:
+            # vv - work-around for LP#1968849
+            await model.set_config({"lxd-snap-channel": "4.24/stable"})
+            # ^^ - once lxd 5.0/stable & juju 2.9/stable work together, use this workaround
+
             await model.deploy("kubernetes-core", channel="latest/edge")
         await model.wait_for_idle(status="active", timeout=60 * 60)
         kubeconfig_path = ops_test.tmp_path / "kubeconfig"
