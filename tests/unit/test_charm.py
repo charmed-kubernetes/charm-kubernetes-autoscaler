@@ -118,7 +118,7 @@ def test_juju_autoscaler_pebble_ready_after_config_minimal(
                 "juju_default_model_uuid": "cdcaed9f-336d-47d3-83ba-d9ea9047b18c",
                 "juju_scale": "- {min: 0, max: 3, application: kubernetes-worker}",
                 "juju_ca_cert": text,
-                "autoscaler_extra_args": '{"v":"5", "scale-down-unneeded-time": "5m0s"}',
+                "autoscaler_extra_args": "{v: 5, scale-down-unneeded-time: 5m0s}",
             }
         )
     assert harness.model.unit.status == ActiveStatus()
@@ -135,3 +135,12 @@ def test_juju_autoscaler_pebble_ready_after_config_minimal(
 
     lightkube_client.delete.assert_called()
     lightkube_client.create.assert_called()
+
+
+@patch("ops.model.Container.get_services", autospec=True)
+@patch("ops.model.Container.stop", autospec=True)
+def test_juju_autoscaler_stop(mock_getservices, mock_stop, harness):
+    container = harness.model.unit.get_container("juju-autoscaler")
+    mock_getservices.return_value = {"juju-autoscaler: []"}
+    harness.charm.on.stop.emit()
+    mock_stop.assert_called_once_with(container, "juju-autoscaler")

@@ -28,18 +28,53 @@ jobs:
       with:
         python-version: ${{ matrix.python }}
     - name: Install Dependencies
-      run: |
-        pip install tox
-        sudo snap install charm --classic
+      run: pip install tox
     - name: Lint
       run: tox -vve lint
     - name: Unit Tests
       run: tox -vve unit
 
-  integration-test:
-    name: Integration test
+  charmcraft-build:
+    name: Build Charm
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Install and prepare LXD snap environment
+        run: |
+          sudo apt-get remove -qy lxd lxd-client | true
+          sudo snap list lxd | true
+          sudo snap install lxd --channel=latest/stable
+          sudo snap refresh lxd --channel=latest/stable
+          sudo lxd waitready
+          sudo lxd init --auto
+          sudo chmod a+wr /var/snap/lxd/common/lxd/unix.socket
+          sudo lxc network set lxdbr0 ipv6.address none
+          sudo usermod -a -G lxd $USER
+          sg lxd -c 'lxc version'
+      - name: Install Charmcraft
+        run: |
+          sudo snap install charmcraft --classic --channel=latest/stable
+      - name: Build Charm
+        run: |
+          sg lxd -c 'charmcraft pack'
+      - name: Upload charm artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: kubernetes-autoscaler.charm
+          path: ./kubernetes-autoscaler*.charm
+      - name: Upload debug artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/runner/snap/charmcraft/common/cache/charmcraft/log/charmcraft-*.log
+
+  integration-test:
+    name: Integration test with VMWare
+    needs: charmcraft-build
+    runs-on: self-hosted
+    timeout-minutes: 90
     steps:
       - name: Check out code
         uses: actions/checkout@v2
@@ -50,45 +85,26 @@ jobs:
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:
-          provider: microk8s
+          provider: vsphere
+          credentials-yaml: ${{ secrets.CREDENTIALS_YAML }}
+          clouds-yaml: ${{ secrets.CLOUDS_YAML }}
+          bootstrap-constraints: "arch=amd64 cores=2 mem=4G"
+          bootstrap-options: "${{ secrets.FOCAL_BOOTSTRAP_OPTIONS }} --model-default datastore=vsanDatastore --model-default primary-network=VLAN_2764 --config caas-image-repo=rocks.canonical.com/cdk/jujusolutions"
+      - name: Download charm artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: kubernetes-autoscaler.charm
       - name: Run test
-        run: sg microk8s -c "tox -e integration"
-
+        run: tox -e integration -- --model-config=tests/data/proxy_config.yaml
       - name: Setup Debug Artifact Collection
         if: ${{ failure() }}
         run: mkdir tmp
-      - name: Collect K8s Status
-        if: ${{ failure() }}
-        run: sudo microk8s.kubectl get all -A 2>&1 | tee tmp/microk8s-status-all.txt
       - name: Collect Juju Status
         if: ${{ failure() }}
-        run: sudo juju status 2>&1 | tee tmp/juju-status.txt
-      - name: Collect K8s Deployment details
-        if: ${{ failure() }}
-        run: sudo microk8s.kubectl describe deployments -A 2>&1 | tee tmp/microk8s-deployments.txt
-      - name: Collect K8s ReplicaSet details
-        if: ${{ failure() }}
-        run: sudo microk8s.kubectl describe replicasets -A 2>&1 | tee tmp/microk8s-replicasets.txt
-      - name: Collect K8s DaemonSet details
-        if: ${{ failure() }}
-        run: sudo microk8s.kubectl describe daemonsets -A 2>&1 | tee tmp/microk8s-daemonsets.txt
-      - name: Collect K8s pod logs
-        if: ${{ failure() }}
         run: |
-          for ns in `sudo microk8s.kubectl get pods -A | awk '{printf "%s;%s\n",$1,$2 }' | grep -v NAME`; do
-            NS_POD=(${ns//;/' '})
-            echo "Pod logs for: $NS_POD"
-            echo "----------------------------------"
-            sudo microk8s.kubectl logs ${NS_POD[1]} -n ${NS_POD[0]} 2>&1 | tee tmp/pod-${NS_POD[0]}-logs.txt
-            echo
-            echo
-          done
-      - name: Collect microk8s snap logs
-        if: ${{ failure() }}
-        run: sudo snap logs -n 300 microk8s 2>&1 | tee tmp/snap-log-microk8s.txt
-      - name: Collect Juju logs for kubernetes-autoscaller
-        if: ${{ failure() }}
-        run: sudo juju debug-log --replay --no-tail -i kubernetes-autoscaller | tee tmp/unit-kubernetes-autoscaller-0.log
+          juju status 2>&1 | tee tmp/juju-status.txt
+          juju-crashdump -s -m controller -a debug-layer -a config -o tmp/
+          mv juju-crashdump-* tmp/ | true
       - name: Upload debug artifacts
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2

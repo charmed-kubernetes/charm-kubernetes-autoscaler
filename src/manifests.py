@@ -52,15 +52,19 @@ class Manifests:
         try:
             self.client.delete(resource_type, name, namespace=namespace)
         except ApiError as err:
-            log.exception("ApiError encountered while attempting to delete resource.")
             if err.status.message is not None:
-                if "not found" in err.status.message and ignore_not_found:
-                    log.error(f"Ignoring not found error:\n{err.status.message}")
-                elif "(Unauthorized)" in err.status.message and ignore_unauthorized:
+                err_lower = err.status.message.lower()
+                if "not found" in err_lower and ignore_not_found:
+                    log.warning(f"Ignoring not found error: {err.status.message}")
+                elif "(unauthorized)" in err_lower and ignore_unauthorized:
                     # Ignore error from https://bugs.launchpad.net/juju/+bug/1941655
-                    log.error(f"Ignoring unauthorized error:\n{err.status.message}")
+                    log.warning(f"Ignoring unauthorized error: {err.status.message}")
                 else:
-                    log.error(err.status.message)
+                    log.exception(
+                        "ApiError encountered while attempting to delete resource: "
+                        + err.status.message
+                    )
                     raise
             else:
+                log.exception("ApiError encountered while attempting to delete resource.")
                 raise
