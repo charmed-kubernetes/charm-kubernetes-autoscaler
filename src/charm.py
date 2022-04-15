@@ -81,6 +81,10 @@ class KubernetesAutoscalerCharm(CharmBase):
             self.unit.set_workload_version("Ready to Scale")
 
     def _cleanup(self, _):
+        cont = self.model.unit.get_container(self.CONTAINER)
+        if cont and cont.can_connect() and cont.get_services(cont.name):
+            cont.stop(cont.name)
+
         self.unit.status = WaitingStatus("Shutting down")
         manifests = Manifests(self)
         manifests.delete_manifest(ignore_unauthorized=True)
