@@ -25,10 +25,8 @@ You can retrieve the necessary configuration information with the following comm
 
 ---
 **NOTE:**
-
-The `kubernetes-controller` is the juju controller containing the charmed-kubernetes model, 
-not the model which holds the `kubernetes-cluster-autoscaler`.
-
+The `kubernetes-controller` is the juju controller which the charmed-kubernetes model, 
+not the model which holds the `kubernetes-autoscaler.
 ---
 
 ```bash
@@ -51,6 +49,23 @@ PASSWORD=$(
     juju show-controller $KUBE_CONTROLLER --show-password --format json |
     jq -rc '.[].account.password'
 )
+```
+
+The autoscaler is recommended to run on a control-plane node so that it isn't reaped when a worker node is scaled
+down. Ensure the control-plane nodes do not have the taint `juju.is/kubernetes-control-plane=true:NoSchedule` applied
+so that they can run pods.
+```bash
+kubectl get nodes -o custom-columns=NAME:.metadata.name,TAINTS:.spec.taints --no-headers 
+```
+
+In order to remove the taint, for each control-plane node run:
+```bash
+kubectl taint node $NODE juju.is/kubernetes-control-plane=true:NoSchedule- 
+```
+
+Deploy the charm into a `k8s` type juju model (not a machine model)
+```bash
+juju deploy kubernetes-autoscaler --constraints "tags=node.juju-application=kubernetes-control-plane"
 ```
 
 Provide these as configuration to the deployed application
