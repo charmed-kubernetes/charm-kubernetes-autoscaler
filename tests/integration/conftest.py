@@ -1,6 +1,7 @@
 import logging
 import os
 
+import juju.utils
 import pytest
 import pytest_asyncio
 import random
@@ -124,8 +125,20 @@ async def k8s_model(k8s_cloud, ops_test):
     model = await ops_test.track_model(
         model_alias, cloud_name=k8s_cloud, credential_name=k8s_cloud
     )
+    model_uuid = model.info.uuid
     yield model, model_alias
-    await ops_test.forget_model(model_alias, timeout=5 * 60, allow_failure=False)
+    timeout = 5 * 60
+    await ops_test.forget_model(model_alias, timeout=timeout, allow_failure=False)
+
+    async def model_removed():
+        _, stdout, stderr = await ops_test.juju("models", "--format", "yaml")
+        if _ != 0:
+            return False
+        model_list = yaml.safe_load(stdout)["models"]
+        which = [m for m in model_list if m["model-uuid"] == model_uuid]
+        return len(which) == 0
+
+    await juju.utils.block_until_with_coroutine(model_removed, timeout=timeout)
 
 
 @pytest.fixture
