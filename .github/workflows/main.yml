@@ -89,7 +89,7 @@ jobs:
         with:
           name: kubernetes-autoscaler.charm
       - name: Run test
-        run: tox -e integration -- --model-config=tests/data/proxy_config.yaml
+        run: tox -e integration -- --model-config=.github/data/proxy_config.yaml
       - name: Setup Debug Artifact Collection
         if: ${{ failure() }}
         run: mkdir tmp
