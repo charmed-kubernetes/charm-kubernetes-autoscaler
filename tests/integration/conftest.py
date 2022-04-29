@@ -3,7 +3,6 @@ import os
 
 import pytest
 import pytest_asyncio
-from _pytest.config.argparsing import Parser
 import random
 import string
 from pathlib import Path
@@ -19,7 +18,7 @@ from lightkube.models.autoscaling_v1 import ScaleSpec
 log = logging.getLogger(__name__)
 
 
-def pytest_addoption(parser: Parser):
+def pytest_addoption(parser):
     parser.addoption(
         "--k8s-cloud",
         action="store",
@@ -129,7 +128,7 @@ async def k8s_model(k8s_cloud, ops_test):
         model_alias, cloud_name=k8s_cloud, credential_name=k8s_cloud
     )
     yield model, model_alias
-    await ops_test.forget_model(model_alias, timeout=5 * 60)
+    await ops_test.forget_model(model_alias, timeout=5 * 60, allow_failure=False)
 
 
 @pytest.fixture

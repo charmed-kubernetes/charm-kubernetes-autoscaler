@@ -1,6 +1,6 @@
 import logging
 import json
-import collections
+import collections.abc
 from types import SimpleNamespace
 import yaml
 
@@ -34,7 +34,7 @@ def _validate(_min, _max, app, model, cfg):
 
 def _parse(cfg):
     json_cfg = json.dumps(cfg)
-    if not isinstance(cfg, collections.Mapping):
+    if not isinstance(cfg, collections.abc.Mapping):
         raise ConfigError(f"{ERROR} Unexpected yaml collection type")
     try:
         _min, _max, app = (cfg[k] for k in ["min", "max", "application"])

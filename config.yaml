@@ -41,6 +41,7 @@ options:
       yaml or json list associated with the autoscaler node-groups define parameters about 
       the node-group. Each item in the node-group list can be defined as the following yaml
       or json structure with the necessary components:
+
         min         [REQUIRED] [int] # minimum number of workers within the node-group
         max         [REQUIRED] [int] # maximum number of workers within the node-group 
         application [REQUIRED] [str] # name of the application within the juju model 
@@ -50,11 +51,15 @@ options:
                                      # to the value within `juju_default_model_uuid`.
                                      # if unspecified, this node-group will simply be ignored
 
-      The following example shows how to create juju-scale config on the shell for two applications
-      which have different scale requirements and differenet models. The first application 
-      defines an explicit model, the second application uses the juju_default_model_uuid
+      The following example shows how to create juju-scale config on the shell for two
+      applications which have different scale requirements and differenet models. The first
+      application defines an explicit model, the second application uses the juju_default_model_uuid
       
-      example
+      examples
+        # Simple
+        juju config kubernetes-autoscaler juju_scale="- {min: 3, max: 5, application: kubernetes-worker}"
+
+        # More complex
         cat << EOF > juju_scale.yaml
         ---
         -                                                                    # explicit model
