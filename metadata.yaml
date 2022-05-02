@@ -8,6 +8,7 @@ description: |
   This charm scales an existing juju deployed kubernetes cluster using the 
   kubernetes cluster autoscaler. 
     https://github.com/charmed-kubernetes/autoscaler/tree/juju/cluster-autoscaler
+docs: https://discourse.charmhub.io/t/kubernetes-autoscaler-docs-index/6324
 summary: |
   Provide this charm application with credentials to add/remove units from 
   an existing juju deployed kubernetes, and the cluster will resize number
