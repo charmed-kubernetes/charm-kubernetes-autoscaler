@@ -1,6 +1,6 @@
 services:
   juju-autoscaler:
-    command: /cluster-autoscaler --namespace test_juju_autoscaler_pebble_ready_after_config_minimal --cloud-provider=juju --cloud-config=/config/cloud-config.yaml --nodes 0:3:cdcaed9f-336d-47d3-83ba-d9ea9047b18c:kubernetes-worker --scale-down-unneeded-time='5m0s' --v='5'
+    command: /cluster-autoscaler --namespace test_juju_autoscaler_pebble_ready_after_config_minimal --cloud-provider=juju --cloud-config=/config/cloud-config.yaml --nodes 1:3:cdcaed9f-336d-47d3-83ba-d9ea9047b18c:kubernetes-worker --scale-down-unneeded-time='5m0s' --v='5'
     override: replace
     startup: enabled
     summary: juju-autoscaler

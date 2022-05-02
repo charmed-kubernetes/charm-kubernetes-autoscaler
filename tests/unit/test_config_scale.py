@@ -12,10 +12,10 @@ def test_json_list():
     scale = ConfigScale(
         "["
         '{"min": 3, "max":5, "application": "kubernetes-worker"},'
-        '{"min": 0, "max":10, "application": "kubernetes-worker-gpu"}'
+        '{"min": 1, "max":10, "application": "kubernetes-worker-gpu"}'
         "]"
     )
-    assert scale.nodes("test") == ["3:5:test:kubernetes-worker", "0:10:test:kubernetes-worker-gpu"]
+    assert scale.nodes("test") == ["3:5:test:kubernetes-worker", "1:10:test:kubernetes-worker-gpu"]
 
 
 def test_list_of_mappings_and_json_yaml():
@@ -24,25 +24,25 @@ def test_list_of_mappings_and_json_yaml():
         "- min: 3\n"
         "  max: 5\n"
         "  application: kubernetes-worker\n"
-        '- {"min": 0, "max":10, "application": "kubernetes-worker-gpu"}\n'
+        '- {"min": 1, "max":10, "application": "kubernetes-worker-gpu"}\n'
     )
-    assert scale.nodes("test") == ["3:5:test:kubernetes-worker", "0:10:test:kubernetes-worker-gpu"]
+    assert scale.nodes("test") == ["3:5:test:kubernetes-worker", "1:10:test:kubernetes-worker-gpu"]
 
 
 def test_yaml_with_model_part():
     scale = ConfigScale(
         "---\n"
-        "- min: 0\n"
+        "- min: 1\n"
         "  max: 10\n"
         "  model: cdcaed9f-336d-47d3-83ba-d9ea9047b18c\n"
         "  application: kubernetes-worker-gpu\n"
     )
-    assert scale.nodes(None) == ["0:10:cdcaed9f-336d-47d3-83ba-d9ea9047b18c:kubernetes-worker-gpu"]
+    assert scale.nodes(None) == ["1:10:cdcaed9f-336d-47d3-83ba-d9ea9047b18c:kubernetes-worker-gpu"]
 
 
 def test_error_yaml_mapping():
     with pytest.raises(ConfigError) as ie:
-        ConfigScale("{min: 0, max: 2, application: kubernetes-worker}")
+        ConfigScale("{min: 1, max: 2, application: kubernetes-worker}")
     assert str(ie.value) == "juju_scale invalid: yaml or json format - expected a list"
 
 
@@ -85,12 +85,28 @@ def test_error_min_not_an_int():
     with pytest.raises(ConfigError) as ie:
         ConfigScale(cfg)
     assert str(ie.value).startswith(
-        "juju_scale invalid: <min> & <max> must be non-negative integers -"
+        "juju_scale invalid: <min> & <max> must be non-negative, non-zero integers -"
+    )
+
+
+def test_error_min_lte_0():
+    cfg = "- {min: 0, max: 3, application: kubernetes-worker}"
+    with pytest.raises(ConfigError) as ie:
+        ConfigScale(cfg)
+    assert str(ie.value).startswith(
+        "juju_scale invalid: <min> & <max> must be non-negative, non-zero integers -"
+    )
+
+    cfg = "- {min: -1, max: 3, application: kubernetes-worker}"
+    with pytest.raises(ConfigError) as ie:
+        ConfigScale(cfg)
+    assert str(ie.value).startswith(
+        "juju_scale invalid: <min> & <max> must be non-negative, non-zero integers -"
     )
 
 
 def test_error_model_invalid():
-    cfg = "- {min: 0, max: 1, model: 2, application: kubernetes-worker}"
+    cfg = "- {min: 1, max: 2, model: 2, application: kubernetes-worker}"
     with pytest.raises(ConfigError) as ie:
         ConfigScale(cfg)
     assert str(ie.value).startswith("juju_scale invalid: Invalid model uuid - ")
