@@ -26,7 +26,7 @@ You can retrieve the necessary configuration information with the following comm
 ---
 **NOTE:**
 The `kubernetes-controller` is the juju controller which holds the charmed-kubernetes model, 
-not the model which holds the `kubernetes-autoscaler.
+not the model which holds the `kubernetes-autoscaler`.
 ---
 
 ```bash
