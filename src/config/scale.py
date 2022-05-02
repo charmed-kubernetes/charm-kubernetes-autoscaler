@@ -25,8 +25,10 @@ def _validate(_min, _max, app, model, cfg):
         _min, _max = int(_min), int(_max)
     except ValueError:
         _min, _max = -1, -1
-    if _min < 0 or _max < 0:
-        raise ConfigError(f"{ERROR} <min> & <max> must be non-negative integers - '{cfg}'")
+    if _min <= 0 or _max <= 0:
+        raise ConfigError(
+            f"{ERROR} <min> & <max> must be non-negative, non-zero integers - '{cfg}'"
+        )
     if _max <= _min:
         raise ConfigError(f"{ERROR} <min> should be less than <max> - '{cfg}'")
     return SimpleNamespace(min=_min, max=_max, model=model, application=app)

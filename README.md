@@ -102,12 +102,12 @@ juju_scale: '- {min: 3, max: 5, application: kubernetes-worker}'  # indicates 3 
 ```
 
 ```yaml
-# indicates 0 to 10 nodes of GPU based workers
+# indicates 1 to 10 nodes of GPU based workers
 juju_scale: '- {min: 1, max: 10, application: kubernetes-worker-gpu}'
 ```
 
 ```yaml
-# indicates 0 to 10 nodes of GPU based workers and 3 to 5 kubernetes-worker nodes
+# indicates 1 to 10 nodes of GPU based workers and 3 to 5 kubernetes-worker nodes
 juju_scale: |-
    - {min: 1, max: 10, application: kubernetes-worker-gpu}
    - {min: 3, max: 5, application: kubernetes-worker}
