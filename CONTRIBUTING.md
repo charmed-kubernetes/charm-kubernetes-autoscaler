@@ -44,6 +44,7 @@ There is an intention to expand this charms feature-set to include:
 * monitoring, 
 * statistics, 
 * an exposed service
+* scaling to/from 0 nodes
 
 Eventually it should be expanded to deploy just as the upstream helm charts suggest
 with the juju cloud-provider mainlined into the upstream source.

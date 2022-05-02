@@ -41,7 +41,7 @@ def harness(request):
         ("default_model_uuid", "cdcaed9f-336d-47d3-83ba-d9ea9047b18c", "nope"),
         (
             "scale",
-            "- {min: 0, max: 1, application: kubernetes-worker}",
+            "- {min: 1, max: 2, application: kubernetes-worker}",
             "- {min: 1, max: 0, application: kubernetes-worker}",
         ),
     ],
@@ -116,7 +116,7 @@ def test_juju_autoscaler_pebble_ready_after_config_minimal(
                 "juju_username": "alice",
                 "juju_password": "secret",
                 "juju_default_model_uuid": "cdcaed9f-336d-47d3-83ba-d9ea9047b18c",
-                "juju_scale": "- {min: 0, max: 3, application: kubernetes-worker}",
+                "juju_scale": "- {min: 1, max: 3, application: kubernetes-worker}",
                 "juju_ca_cert": text,
                 "autoscaler_extra_args": "{v: 5, scale-down-unneeded-time: 5m0s}",
             }
