@@ -1,9 +1,9 @@
 import logging
 import os
 
+import juju.utils
 import pytest
 import pytest_asyncio
-from _pytest.config.argparsing import Parser
 import random
 import string
 from pathlib import Path
@@ -19,7 +19,7 @@ from lightkube.models.autoscaling_v1 import ScaleSpec
 log = logging.getLogger(__name__)
 
 
-def pytest_addoption(parser: Parser):
+def pytest_addoption(parser):
     parser.addoption(
         "--k8s-cloud",
         action="store",
@@ -43,11 +43,8 @@ async def charmed_kubernetes(ops_test):
             deploy, control_plane_app = False, control_plane_apps[0]
 
         if deploy:
-            # vv - work-around for LP#1968849
-            await model.set_config({"lxd-snap-channel": "4.24/stable"})
-            # ^^ - once lxd 5.0/stable & juju 2.9/stable work together, use this workaround
-
             await model.deploy("kubernetes-core", channel="latest/edge")
+
         await model.wait_for_idle(status="active", timeout=60 * 60)
         kubeconfig_path = ops_test.tmp_path / "kubeconfig"
         retcode, stdout, stderr = await ops_test.run(
@@ -128,8 +125,20 @@ async def k8s_model(k8s_cloud, ops_test):
     model = await ops_test.track_model(
         model_alias, cloud_name=k8s_cloud, credential_name=k8s_cloud
     )
+    model_uuid = model.info.uuid
     yield model, model_alias
-    await ops_test.forget_model(model_alias, timeout=5 * 60)
+    timeout = 5 * 60
+    await ops_test.forget_model(model_alias, timeout=timeout, allow_failure=False)
+
+    async def model_removed():
+        _, stdout, stderr = await ops_test.juju("models", "--format", "yaml")
+        if _ != 0:
+            return False
+        model_list = yaml.safe_load(stdout)["models"]
+        which = [m for m in model_list if m["model-uuid"] == model_uuid]
+        return len(which) == 0
+
+    await juju.utils.block_until_with_coroutine(model_removed, timeout=timeout)
 
 
 @pytest.fixture

@@ -25,18 +25,47 @@ You can retrieve the necessary configuration information with the following comm
 
 ---
 **NOTE:**
-
-The `kubernetes-controller` is the juju controller containing the charmed-kubernetes model, 
-not the model which holds the `kubernetes-cluster-autoscaler`.
-
+The `kubernetes-controller` is the juju controller which holds the charmed-kubernetes model, 
+not the model which holds the `kubernetes-autoscaler`.
 ---
 
 ```bash
 KUBE_CONTROLLER=<kubernetes-controller>
-API_ENDPOINTS=$(juju show-controller $KUBE_CONTROLLER --format json | jq -rc '.[].details["api-endpoints"] | join(",")' )
-CA_CERT=$(juju show-controller $KUBE_CONTROLLER --format json | jq -rc '.[].details["ca-cert"]' | base64 -w0)
-USER=$(juju show-controller $KUBE_CONTROLLER --format json | jq -rc '.[].account.user')
-PASSWORD=$(juju show-controller $KUBE_CONTROLLER --show-password --format json | jq -rc '.[].account.password')
+API_ENDPOINTS=$(
+    juju show-controller $KUBE_CONTROLLER --format json |
+    jq -rc '.[].details["api-endpoints"] |
+    join(",")'
+)
+CA_CERT=$(
+    juju show-controller $KUBE_CONTROLLER --format json |
+    jq -rc '.[].details["ca-cert"]' |
+    base64 -w0
+)
+USER=$(
+    juju show-controller $KUBE_CONTROLLER --format json |
+    jq -rc '.[].account.user'
+)
+PASSWORD=$(
+    juju show-controller $KUBE_CONTROLLER --show-password --format json |
+    jq -rc '.[].account.password'
+)
+```
+
+The autoscaler is recommended to run on a control-plane node so that it isn't reaped when a worker node is scaled
+down. Ensure the control-plane nodes do not have the taint `juju.is/kubernetes-control-plane=true:NoSchedule` applied
+so that they can run pods.
+```bash
+kubectl get nodes -o custom-columns=NAME:.metadata.name,TAINTS:.spec.taints --no-headers 
+```
+
+In order to remove the taint, for each control-plane node run:
+```bash
+kubectl taint node $NODE juju.is/kubernetes-control-plane=true:NoSchedule- 
+```
+
+Deploy the charm into a `k8s` type juju model (not a machine model)
+```bash
+juju deploy kubernetes-autoscaler --constraints "tags=node.juju-application=kubernetes-control-plane"
 ```
 
 Provide these as configuration to the deployed application
@@ -62,24 +91,29 @@ juju config kubernetes-autoscaler juju_default_model_uuid=$MODEL_UUID
 Lastly, pick the worker application to scale. Usually this is `kubernetes-worker`.
 
 ```bash
-juju config kubernetes-autoscaler juju_scale="3:5:kubernetes-worker"
+juju config kubernetes-autoscaler juju_scale="- {min: 3, max: 5, application: kubernetes-worker}"
 ```
 
 See below for more complicated examples.
 
 ```yaml
-juju_default_model_uuid: "cdcaed9f-336d-47d3-83ba-d9ea9047b18c" # within this juju model
-juju_scale: '- 3:5:kubernetes-worker'          # indicate 3 to 5 kubernetes-worker nodes
+juju_default_model_uuid: "cdcaed9f-336d-47d3-83ba-d9ea9047b18c"   # within this juju model
+juju_scale: '- {min: 3, max: 5, application: kubernetes-worker}'  # indicates 3 to 5 kubernetes-worker nodes
 ```
 
 ```yaml
-juju_scale: '- 0:10:kubernetes-worker-gpu'   # indicates 0 to 10 nodes of GPU based workers
+# indicates 0 to 10 nodes of GPU based workers
+juju_scale: '- {min: 1, max: 10, application: kubernetes-worker-gpu}'
 ```
 
 ```yaml
-# indicates 0 to 10 nodes of GPU based workers and 3 to 5 vanilla worker nodes
-juju_scale: '["0:10:kubernetes-worker-gpu","3:5:kubernetes-worker"]'
+# indicates 0 to 10 nodes of GPU based workers and 3 to 5 kubernetes-worker nodes
+juju_scale: |-
+   - {min: 1, max: 10, application: kubernetes-worker-gpu}
+   - {min: 3, max: 5, application: kubernetes-worker}
 ```
+
+Be sure that the yaml presented in `juju_scale` is valid json or yaml.
 
 ## Contributing
 
