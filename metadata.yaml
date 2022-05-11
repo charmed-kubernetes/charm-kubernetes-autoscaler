@@ -3,7 +3,7 @@
 
 name: kubernetes-autoscaler
 display-name: |
-  Deploy into an existing kubernetes cluster in order to scale it with juju.
+  Kubernetes Autoscaler
 description: |
   This charm scales an existing juju deployed kubernetes cluster using the 
   kubernetes cluster autoscaler. 
