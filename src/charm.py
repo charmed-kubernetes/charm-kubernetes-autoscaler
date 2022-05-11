@@ -87,7 +87,7 @@ class KubernetesAutoscalerCharm(CharmBase):
 
         self.unit.status = WaitingStatus("Shutting down")
         manifests = Manifests(self)
-        manifests.delete_manifest(ignore_unauthorized=True)
+        manifests.delete_manifest(ignore_unauthorized=True, ignore_not_found=True)
 
 
 if __name__ == "__main__":
