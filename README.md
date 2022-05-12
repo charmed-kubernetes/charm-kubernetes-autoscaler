@@ -65,7 +65,7 @@ kubectl taint node $NODE juju.is/kubernetes-control-plane=true:NoSchedule-
 
 Deploy the charm into a `k8s` type juju model (not a machine model)
 ```bash
-juju deploy kubernetes-autoscaler --constraints "tags=node.juju-application=kubernetes-control-plane"
+juju deploy kubernetes-autoscaler --trust --constraints "tags=node.juju-application=kubernetes-control-plane"
 ```
 
 Provide these as configuration to the deployed application
