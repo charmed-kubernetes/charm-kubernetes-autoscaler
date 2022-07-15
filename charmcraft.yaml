@@ -1,15 +1,25 @@
 # Learn more about charmcraft.yaml configuration at:
 # https://juju.is/docs/sdk/charmcraft-config
+
+# Architectures based on supported arch's in upstream
+# https://github.com/kubernetes/autoscaler/blob/68e4f4a37ae87e527e306c6ae23d8871b3032484/cluster-autoscaler/Makefile#L1
 type: "charm"
 bases:
   - build-on:
     - name: "ubuntu"
       channel: "20.04"
+      architectures: ["amd64"]
     run-on:
     - name: "ubuntu"
       channel: "20.04"
+      architectures:
+        - amd64
+        - arm64
     - name: "ubuntu"
       channel: "22.04"
+      architectures:
+        - amd64
+        - arm64
 parts:
   charm:
     prime:
