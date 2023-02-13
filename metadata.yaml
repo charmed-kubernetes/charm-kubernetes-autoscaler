@@ -29,4 +29,4 @@ resources:
   juju-autoscaler-image:
     type: oci-image
     description: OCI Image for kubernetes-autoscaler with a juju cloud provider.
-    upstream-source: rocks.canonical.com/cdk/cluster-autoscaler-juju:dev-2.9.latest-build7
+    upstream-source: rocks.canonical.com/cdk/cluster-autoscaler-juju:dev-2.9.38-build1
